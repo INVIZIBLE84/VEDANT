@@ -14,7 +14,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BellRing } from "lucide-react"; // Added Admin Icons, imported BellRing
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity } from "lucide-react"; // Removed duplicate BellRing import
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser } from "@/types/user"; // Import UserRole and fetch function
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -26,11 +26,18 @@ interface NavItem {
   icon: React.ReactNode;
   roles: UserRole[];
   isAdminSection?: boolean; // Flag for admin-specific sections
+  isDashboardLink?: boolean; // Flag for role-specific dashboard links
 }
 
+// Updated navItems with specific dashboard links
 const navItems: NavItem[] = [
-  // General Sections
-  { href: "/", label: "Dashboard", icon: <LayoutDashboard />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
+  // Role-Specific Dashboards
+   { href: "/dashboard/student", label: "My Dashboard", icon: <LayoutDashboard />, roles: ["student"], isDashboardLink: true },
+   { href: "/dashboard/faculty", label: "Faculty Dashboard", icon: <LayoutDashboard />, roles: ["faculty"], isDashboardLink: true },
+   // Admin Overview (acts as admin dashboard)
+   { href: "/admin", label: "Admin Dashboard", icon: <LayoutDashboard />, roles: ["admin"], isAdminSection: true, isDashboardLink: true },
+
+   // General Sections (Non-dashboard links)
   { href: "/attendance", label: "Attendance", icon: <BarChart3 />, roles: ["student", "faculty", "admin"] },
   { href: "/fees", label: "Fees", icon: <DollarSign />, roles: ["student", "admin"] },
   { href: "/clearance", label: "Clearance", icon: <CheckCircle />, roles: ["student", "faculty", "admin", "clearance_officer"] },
@@ -39,15 +46,13 @@ const navItems: NavItem[] = [
   { href: "/notifications", label: "Notifications", icon: <Bell />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
   { href: "/profile", label: "Profile", icon: <User />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
 
-  // Admin Sections
-  { href: "/admin", label: "Admin Overview", icon: <Activity />, roles: ["admin"], isAdminSection: true },
+  // Admin Sections (Excluding the main admin dashboard link which is now above)
   { href: "/admin/users", label: "Users", icon: <User />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/roles", label: "Roles", icon: <ShieldCheck />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/modules", label: "Modules", icon: <Settings />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/logs", label: "Logs", icon: <FileText />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRing />, roles: ["admin"], isAdminSection: true },
-  // { href: "/settings", label: "System Settings", icon: <Settings />, roles: ["admin"], isAdminSection: true }, // Consolidate Settings under Admin?
+  { href: "/admin/broadcasts", label: "Broadcasts", icon: <Activity />, roles: ["admin"], isAdminSection: true }, // Changed icon to Activity as BellRing was duplicate
 ];
 
 export function AppSidebar() {
@@ -68,34 +73,44 @@ export function AppSidebar() {
    }, []);
 
 
+   // Filter items based on the current user's role
   const filteredNavItems = navItems.filter(item => currentUserRole && item.roles.includes(currentUserRole));
-  const adminNavItems = filteredNavItems.filter(item => item.isAdminSection);
-  const generalNavItems = filteredNavItems.filter(item => !item.isAdminSection);
+
+  // Separate dashboard links, general links, and admin-specific links
+  const dashboardLinks = filteredNavItems.filter(item => item.isDashboardLink);
+  const generalNavItems = filteredNavItems.filter(item => !item.isDashboardLink && !item.isAdminSection);
+  const adminNavItems = filteredNavItems.filter(item => item.isAdminSection && !item.isDashboardLink); // Exclude the main admin dashboard link here
 
 
   const renderMenuItems = (items: NavItem[]) => {
-     return items.map((item) => (
-          <SidebarMenuItem key={item.href}>
-            <Link href={item.href} legacyBehavior passHref>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                tooltip={item.label}
-                className={cn(
-                  "transition-colors duration-200",
-                   pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
-                    ? "bg-primary/10 text-primary hover:bg-primary/20"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <a>
-                  {item.icon}
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </a>
-              </SidebarMenuButton>
-            </Link>
-          </SidebarMenuItem>
-     ));
+     return items.map((item) => {
+         const isActive = pathname === item.href || (item.href !== "/" && !item.isDashboardLink && pathname.startsWith(item.href));
+         // Special check for admin root dashboard link
+         const isAdminRootActive = item.href === "/admin" && pathname === "/admin";
+
+          return (
+              <SidebarMenuItem key={item.href}>
+                <Link href={item.href} legacyBehavior passHref>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive || isAdminRootActive}
+                    tooltip={item.label}
+                    className={cn(
+                      "transition-colors duration-200",
+                       (isActive || isAdminRootActive)
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    )}
+                  >
+                    <a>
+                      {item.icon}
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </Link>
+              </SidebarMenuItem>
+          );
+        });
   };
 
   return (
@@ -130,7 +145,14 @@ export function AppSidebar() {
              ))
            ) : (
              <>
-                {renderMenuItems(generalNavItems)}
+                 {/* Render Dashboard Link First */}
+                 {renderMenuItems(dashboardLinks)}
+
+                 {/* Separator if there are general items */}
+                 {(generalNavItems.length > 0 || adminNavItems.length > 0) && <Separator className="my-2" />}
+
+                 {/* Render General Items */}
+                 {renderMenuItems(generalNavItems)}
 
                 {/* Separator and Admin Section Header */}
                 {adminNavItems.length > 0 && (
@@ -147,6 +169,7 @@ export function AppSidebar() {
            {!isLoading && !currentUserRole && (
                 <SidebarMenuItem>
                     <SidebarMenuButton disabled>
+                         {/* Optionally link to login */}
                         <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">Login Required</span>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

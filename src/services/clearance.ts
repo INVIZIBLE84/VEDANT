@@ -227,6 +227,13 @@ function calculateOverallStatus(steps: ClearanceStep[]): ClearanceRequest['overa
     return 'Pending'; // If all are pending
 }
 
+// --- Calculate Progress ---
+export const calculateProgress = (steps: ClearanceStep[]): number => {
+    if (!steps || steps.length === 0) return 0;
+    const approvedCount = steps.filter(s => s.status === 'Approved').length;
+    return Math.round((approvedCount / steps.length) * 100);
+};
+
 
 // --- Sample Data (In-memory placeholder) ---
 
@@ -261,12 +268,16 @@ let sampleClearanceRequests: ClearanceRequest[] = [
   },
     {
     requestId: 'req3',
-    studentId: 'student789', // Charlie Brown - No request submitted yet
+    studentId: 'student789', // Charlie Brown
     studentName: 'Charlie Brown',
     studentDepartment: 'Mathematics',
     studentRollNo: 'S11223',
-    submissionDate: '', // Not submitted
-    overallStatus: 'Pending', // Or maybe 'Not Submitted' status?
-    steps: [], // No steps yet
+    submissionDate: '2024-07-26T09:00:00Z', // Submitted now
+    overallStatus: 'Pending', // Calculated
+    steps: [
+       { stepId: `step-${Date.now()}-lib`, department: 'Library', approverRole: 'faculty', status: 'Pending' },
+       { stepId: `step-${Date.now()}-fin`, department: 'Finance', approverRole: 'admin', status: 'Pending' },
+       { stepId: `step-${Date.now()}-hod`, department: 'Mathematics', approverRole: 'faculty', status: 'Pending' },
+    ],
   },
 ];
