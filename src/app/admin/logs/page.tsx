@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { getAuditLogs, exportAuditLogsToCSV, type AuditLogEntryAdmin, type AuditLogFilters } from "@/services/admin"; // Import log service functions
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge"; // Added Badge import
 
 
 // Helper to get distinct action types from logs (or define statically)

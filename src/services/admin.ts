@@ -242,6 +242,7 @@ export interface ModuleConfig {
     name: string; // Display name
     description: string;
     enabled: boolean;
+    locked?: boolean; // Added for emergency controls
     icon?: React.ReactNode; // For UI
     settings?: Record<string, any>; // Module-specific settings
 }
@@ -253,7 +254,7 @@ export async function getModuleConfigs(): Promise<ModuleConfig[]> {
     return [...mockModuleConfigs]; // Return copy
 }
 
-/** Simulates updating a module's configuration */
+/** Simulates updating a module's configuration (enabled, locked, settings) */
 export async function updateModuleConfig(moduleId: string, updates: Partial<ModuleConfig>): Promise<{ success: boolean; message: string; config?: ModuleConfig }> {
     console.log(`Admin updating config for module ${moduleId}:`, updates);
     await new Promise(res => setTimeout(res, 90));
@@ -269,7 +270,19 @@ export async function updateModuleConfig(moduleId: string, updates: Partial<Modu
      const updatedConfig = { ...currentConfig, ...updates, settings: newSettings };
 
     mockModuleConfigs[configIndex] = updatedConfig;
-    logAdminAudit('admin001', 'Admin User', 'Module Config Updated', `Updated configuration for module ${moduleId}. Fields: ${Object.keys(updates).join(', ')}`);
+
+    // Determine the action for logging
+    let logAction = 'Module Config Updated';
+    let logDetails = `Updated configuration for module ${moduleId}. Fields: ${Object.keys(updates).join(', ')}`;
+    if (updates.enabled !== undefined) {
+        logAction = updates.enabled ? 'Module Enabled' : 'Module Disabled';
+        logDetails = `${updates.enabled ? 'Enabled' : 'Disabled'} module ${moduleId}`;
+    } else if (updates.locked !== undefined) {
+        logAction = updates.locked ? 'Module Locked' : 'Module Unlocked';
+        logDetails = `${updates.locked ? 'Locked' : 'Unlocked'} module ${moduleId}`;
+    }
+
+    logAdminAudit('admin001', 'Admin User', logAction, logDetails);
     return { success: true, message: "Module configuration updated.", config: updatedConfig };
 }
 
@@ -540,11 +553,11 @@ let mockRoles: Role[] = [
 ];
 
 let mockModuleConfigs: ModuleConfig[] = [
-    { id: 'attendance', name: 'Attendance', description: 'Manage student attendance records.', enabled: true, settings: { attendanceMethod: 'wifi', requiredWifiSsid: 'Campus-WiFi', enableAbsentWarning: true } },
-    { id: 'fees', name: 'Fee Management', description: 'Track student fee payments.', enabled: true, settings: {} },
-    { id: 'clearance', name: 'Clearance Tracker', description: 'Manage student clearance process.', enabled: true, settings: {} },
-    { id: 'documents', name: 'Document Workflow', description: 'Manage internal documents and printing.', enabled: true, settings: { enableVersioning: true } },
-    { id: 'notifications', name: 'Notifications', description: 'Send and manage system notifications.', enabled: true, settings: {} },
+    { id: 'attendance', name: 'Attendance', description: 'Manage student attendance records.', enabled: true, locked: false, settings: { attendanceMethod: 'wifi', requiredWifiSsid: 'Campus-WiFi', enableAbsentWarning: true } },
+    { id: 'fees', name: 'Fee Management', description: 'Track student fee payments.', enabled: true, locked: false, settings: {} },
+    { id: 'clearance', name: 'Clearance Tracker', description: 'Manage student clearance process.', enabled: true, locked: false, settings: {} },
+    { id: 'documents', name: 'Document Workflow', description: 'Manage internal documents and printing.', enabled: true, locked: false, settings: { enableVersioning: true } },
+    { id: 'notifications', name: 'Notifications', description: 'Send and manage system notifications.', enabled: true, locked: false, settings: {} },
 ];
 
 let mockAuditLogs: AuditLogEntryAdmin[] = [

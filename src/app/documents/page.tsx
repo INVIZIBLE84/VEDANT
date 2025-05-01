@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, FileType, FileSpreadsheet, FilePresentation, ImageIcon, FileArchive, FileQuestion } from "lucide-react"; // Import specific icons
+import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion } from "lucide-react"; // Import specific icons
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +29,7 @@ const FileIconMap: Record<FileIconType, React.ReactNode> = {
     pdf: <FileType className="text-red-500" />,
     word: <FileType className="text-blue-500" />,
     excel: <FileSpreadsheet className="text-green-500" />,
-    powerpoint: <FilePresentation className="text-orange-500" />,
+    powerpoint: <LucidePresentation className="text-orange-500" />, // Changed to LucidePresentation
     image: <ImageIcon className="text-purple-500" />,
     zip: <FileArchive className="text-yellow-600" />,
     text: <FileType className="text-gray-500" />,
@@ -779,4 +779,3 @@ export default function DocumentsPage() {
         </div>
     );
 }
-

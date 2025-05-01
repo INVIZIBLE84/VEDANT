@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { BellRing, PlusCircle, Send, Loader2, Users, User, Building, Filter, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { BellRing, PlusCircle, Send, Loader2, Users, User, Building, Filter, Trash2, Calendar as CalendarIcon, Search } from "lucide-react"; // Added Search
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

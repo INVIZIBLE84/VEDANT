@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, ToggleLeft, ToggleRight, Loader2, Save } from "lucide-react";
+import { Settings, ToggleLeft, ToggleRight, Loader2, Save, Lock, Unlock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getModuleConfigs, updateModuleConfig, type ModuleConfig, type AttendanceMethod } from "@/services/admin"; // Import module service functions
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export default function AdminModulesPage() {
     const { toast } = useToast();
@@ -91,7 +92,7 @@ export default function AdminModulesPage() {
             <Card>
                  <CardHeader>
                     <CardTitle>Manage Modules</CardTitle>
-                    <CardDescription>Enable, disable, and configure system modules.</CardDescription>
+                    <CardDescription>Enable, disable, lock, and configure system modules.</CardDescription>
                 </CardHeader>
                  <CardContent className="space-y-6">
                      {isLoading ? (
@@ -100,7 +101,10 @@ export default function AdminModulesPage() {
                              <Card key={i} className="p-4 animate-pulse">
                                  <div className="flex items-center justify-between">
                                     <Skeleton className="h-6 w-32 rounded" />
-                                    <Skeleton className="h-6 w-12 rounded-full" />
+                                     <div className="flex gap-2">
+                                        <Skeleton className="h-6 w-12 rounded-full" />
+                                        <Skeleton className="h-6 w-12 rounded-full" />
+                                     </div>
                                  </div>
                                  <div className="mt-4 space-y-3">
                                      <Skeleton className="h-4 w-48 rounded" />
@@ -115,24 +119,42 @@ export default function AdminModulesPage() {
                                      <Label htmlFor={`switch-${config.id}`} className="text-lg font-semibold flex items-center gap-2">
                                         {config.icon || <Settings className="h-5 w-5 text-muted-foreground" />} {config.name}
                                      </Label>
-                                     <Switch
-                                         id={`switch-${config.id}`}
-                                         checked={config.enabled}
-                                         onCheckedChange={(checked) => handleConfigChange(config.id, 'enabled', checked)}
-                                         aria-label={`Enable ${config.name} module`}
-                                      />
+                                      <div className="flex items-center space-x-2">
+                                          {/* Lock Switch */}
+                                          <div className="flex items-center space-x-1" title={config.locked ? 'Module Locked (Emergency)' : 'Module Unlocked'}>
+                                            <Switch
+                                                 id={`lock-switch-${config.id}`}
+                                                 checked={config.locked}
+                                                 onCheckedChange={(checked) => handleConfigChange(config.id, 'locked', checked)}
+                                                 aria-label={`Lock ${config.name} module`}
+                                                 className="data-[state=checked]:bg-destructive" // Red when locked
+                                             />
+                                              {config.locked ? <Lock className="h-4 w-4 text-destructive"/> : <Unlock className="h-4 w-4 text-muted-foreground"/>}
+                                          </div>
+                                          {/* Enable Switch */}
+                                          <div className="flex items-center space-x-1" title={config.enabled ? 'Module Enabled' : 'Module Disabled'}>
+                                             <Switch
+                                                 id={`switch-${config.id}`}
+                                                 checked={config.enabled}
+                                                 onCheckedChange={(checked) => handleConfigChange(config.id, 'enabled', checked)}
+                                                 aria-label={`Enable ${config.name} module`}
+                                                 disabled={config.locked} // Disable enabling/disabling if locked
+                                              />
+                                               {config.enabled ? <ToggleRight className="h-4 w-4 text-green-500"/> : <ToggleLeft className="h-4 w-4 text-muted-foreground"/>}
+                                          </div>
+                                      </div>
                                  </div>
                                  <p className="text-sm text-muted-foreground mt-1">{config.description}</p>
 
                                  {/* Module-Specific Settings */}
-                                  <div className={`mt-4 space-y-3 transition-opacity duration-300 ${config.enabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
+                                  <div className={`mt-4 space-y-3 transition-opacity duration-300 ${config.enabled && !config.locked ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
                                      {config.id === 'attendance' && (
                                          <div className="grid w-full max-w-sm items-center gap-1.5">
                                              <Label htmlFor={`attendance-method-${config.id}`}>Attendance Method</Label>
                                              <Select
                                                  value={config.settings?.attendanceMethod}
                                                  onValueChange={(value) => handleConfigChange(config.id, 'settings', { ...config.settings, attendanceMethod: value as AttendanceMethod })}
-                                                 disabled={!config.enabled}
+                                                 disabled={!config.enabled || config.locked}
                                              >
                                                 <SelectTrigger id={`attendance-method-${config.id}`}>
                                                     <SelectValue placeholder="Select method" />
@@ -154,7 +176,7 @@ export default function AdminModulesPage() {
                                                          value={config.settings?.requiredWifiSsid || ''}
                                                          onChange={(e) => handleConfigChange(config.id, 'settings', { ...config.settings, requiredWifiSsid: e.target.value })}
                                                          placeholder="e.g., Campus-WiFi"
-                                                         disabled={!config.enabled}
+                                                         disabled={!config.enabled || config.locked}
                                                      />
                                                  </div>
                                              )}
@@ -163,7 +185,7 @@ export default function AdminModulesPage() {
                                                      id={`attendance-warning-${config.id}`}
                                                      checked={config.settings?.enableAbsentWarning}
                                                      onCheckedChange={(checked) => handleConfigChange(config.id, 'settings', { ...config.settings, enableAbsentWarning: checked })}
-                                                     disabled={!config.enabled}
+                                                     disabled={!config.enabled || config.locked}
                                                 />
                                                 <Label htmlFor={`attendance-warning-${config.id}`}>Enable Absence Warning System</Label>
                                             </div>
@@ -176,7 +198,7 @@ export default function AdminModulesPage() {
                                                          id={`doc-versioning-${config.id}`}
                                                          checked={config.settings?.enableVersioning}
                                                          onCheckedChange={(checked) => handleConfigChange(config.id, 'settings', { ...config.settings, enableVersioning: checked })}
-                                                         disabled={!config.enabled}
+                                                         disabled={!config.enabled || config.locked}
                                                     />
                                                     <Label htmlFor={`doc-versioning-${config.id}`}>Enable Document Versioning</Label>
                                                 </div>

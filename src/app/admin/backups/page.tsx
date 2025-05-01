@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { DatabaseZap, Download, RotateCcw, UploadCloud, Server, Cloud, Clock, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { DatabaseZap, Download, RotateCcw, UploadCloud, Server, Cloud, Clock, CheckCircle, AlertTriangle, Loader2, Save } from "lucide-react"; // Added Save
 import { useToast } from "@/hooks/use-toast";
 import { getBackupHistory, createBackup, restoreFromBackup, getBackupSettings, updateBackupSettings, type BackupEntry, type BackupSettings, type BackupTarget } from "@/services/admin"; // Import backup service functions
 import { format } from "date-fns";
@@ -273,3 +273,4 @@ export default function AdminBackupsPage() {
         </div>
     );
 }
+
