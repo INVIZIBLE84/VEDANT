@@ -162,7 +162,7 @@ interface SummaryCardProps {
 }
 
 function SummaryCard({ title, value, icon, description, link, linkText }: SummaryCardProps) {
-    const content = (
+    const cardContent = (
         <Card className="group transform transition-transform duration-300 hover:-translate-y-1 hover:shadow-xl" style={{ perspective: '1000px' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -171,16 +171,18 @@ function SummaryCard({ title, value, icon, description, link, linkText }: Summar
             <CardContent style={{ transformStyle: 'preserve-3d' }}>
                 <div className="text-2xl font-bold transform transition-transform duration-300 group-hover:translate-z-2">{value}</div>
                 {description && <p className="text-xs text-muted-foreground transform transition-transform duration-300 group-hover:translate-z-4">{description}</p>}
+                {/* If the entire card is linked, don't render an inner link */}
                 {link && linkText && (
-                    <Link href={link} className="text-xs text-accent hover:underline mt-2 block">
+                    <p className="text-xs text-accent hover:underline mt-2 block">
                         {linkText}
-                    </Link>
+                    </p>
                 )}
             </CardContent>
         </Card>
     );
 
-    return link ? <Link href={link}>{content}</Link> : content;
+    // If a link is provided, wrap the entire card with the Link component
+    return link ? <Link href={link} className="no-underline">{cardContent}</Link> : cardContent;
 }
 
 
