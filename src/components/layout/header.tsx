@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react"; // Import React for hooks
+import { useRouter } from 'next/navigation'; // Import useRouter for redirection
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -15,15 +16,18 @@ import {
 import { Button } from "@/components/ui/button"; // Import Button
 import { LogOut, Settings, User, Bell } from "lucide-react"; // Added Bell
 import Link from "next/link";
-import { AuthUser, getCurrentUser } from "@/types/user"; // Import types and fetch function
+import { AuthUser, getCurrentUser, logoutUser } from "@/types/user"; // Import types, fetch function, and logoutUser
 import { getUnreadNotificationCount } from "@/services/notifications"; // Import notification service
 import { Badge } from "@/components/ui/badge"; // Import Badge
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 
 export function Header() {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(true);
+  const router = useRouter(); // Hook for navigation
+  const { toast } = useToast(); // Hook for showing toasts
 
    // Fetch user data and notification count on mount
    React.useEffect(() => {
@@ -48,6 +52,30 @@ export function Header() {
   const getInitials = (name: string | undefined) => {
      return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
   }
+
+  const handleLogout = async () => {
+      setIsLoading(true); // Show loading state
+      try {
+          await logoutUser(); // Call the simulated logout function
+          setUser(null); // Clear local user state
+          setUnreadCount(0); // Reset notification count
+          toast({
+              title: "Logged Out",
+              description: "You have been successfully logged out.",
+          });
+          router.push('/login'); // Redirect to login page
+      } catch (error) {
+           console.error("Logout error:", error);
+           toast({
+               variant: "destructive",
+               title: "Logout Failed",
+               description: "Could not log you out. Please try again.",
+           });
+           setIsLoading(false); // Hide loading state on error
+      }
+      // setIsLoading(false) will be implicitly handled by navigation
+  };
+
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
@@ -76,7 +104,7 @@ export function Header() {
 
 
         {/* User Menu */}
-        {isLoading ? (
+        {isLoading && !user ? ( // Show skeleton only if loading AND no user yet
              <Skeleton className="h-9 w-9 rounded-full" /> // Skeleton loader for avatar
         ) : user ? (
             <DropdownMenu>
@@ -109,16 +137,20 @@ export function Header() {
                     </DropdownMenuItem>
                  )}
                 <DropdownMenuSeparator />
-                {/* TODO: Implement Logout */}
-                <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive-foreground focus:bg-destructive">
+                {/* Implement Logout */}
+                <DropdownMenuItem
+                   onClick={handleLogout}
+                   disabled={isLoading}
+                   className="cursor-pointer text-destructive focus:text-destructive-foreground focus:bg-destructive"
+                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
         ) : (
-            // Optional: Show Login button if not logged in
-            <Link href="/login"> {/* TODO: Create /login page */}
+            // Show Login button if not loading and no user
+            <Link href="/login">
                 <Button variant="outline" size="sm">Login</Button>
             </Link>
         )}

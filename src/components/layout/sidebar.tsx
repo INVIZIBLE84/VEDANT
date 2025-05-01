@@ -4,7 +4,7 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image"; // Import next/image
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation"; // Import useRouter
 import {
   Sidebar,
   SidebarContent,
@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/sidebar";
 import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Keep BellRing if used elsewhere, or remove if replaced fully by Bell
 import { cn } from "@/lib/utils";
-import { UserRole, getCurrentUser } from "@/types/user"; // Import UserRole and fetch function
+import { UserRole, getCurrentUser, logoutUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Separator } from "@/components/ui/separator"; // Import Separator
+import { useToast } from "@/hooks/use-toast"; // Import useToast
 
 interface NavItem {
   href: string;
@@ -59,8 +60,11 @@ const navItems: NavItem[] = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter(); // Hook for navigation
+  const { toast } = useToast(); // Hook for toasts
   const [currentUserRole, setCurrentUserRole] = React.useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false); // State for logout operation
 
 
    // Fetch user role on component mount
@@ -83,6 +87,28 @@ export function AppSidebar() {
   const generalNavItems = filteredNavItems.filter(item => !item.isDashboardLink && !item.isAdminSection);
   const adminNavItems = filteredNavItems.filter(item => item.isAdminSection && !item.isDashboardLink); // Exclude the main admin dashboard link here
 
+
+  const handleLogout = async () => {
+      setIsLoggingOut(true); // Indicate logout in progress
+      try {
+          await logoutUser(); // Call the simulated logout function
+          setCurrentUserRole(null); // Clear local user role state
+          toast({
+              title: "Logged Out",
+              description: "You have been successfully logged out.",
+          });
+          router.push('/login'); // Redirect to login page
+      } catch (error) {
+           console.error("Logout error:", error);
+           toast({
+               variant: "destructive",
+               title: "Logout Failed",
+               description: "Could not log you out. Please try again.",
+           });
+           setIsLoggingOut(false); // Reset loading state on error
+      }
+      // setIsLoggingOut(false) will be implicitly handled by navigation on success
+  };
 
   const renderMenuItems = (items: NavItem[]) => {
      // Sort admin items alphabetically by label
@@ -127,7 +153,7 @@ export function AppSidebar() {
          <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
              {/* User should place their logo image at /public/spark-logo.png */}
              <Image
-                src="/spark-logo.png"
+                src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
                 width={32}
                 height={32}
@@ -178,22 +204,24 @@ export function AppSidebar() {
            )}
            {!isLoading && !currentUserRole && (
                 <SidebarMenuItem>
-                    <SidebarMenuButton disabled>
-                         {/* Optionally link to login */}
-                        <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">Login Required</span>
+                    <SidebarMenuButton disabled asChild>
+                        <Link href="/login" className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                            Login Required
+                        </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
            )}
         </SidebarMenu>
       </SidebarContent>
        <SidebarFooter className="p-2 mt-auto">
-        {/* TODO: Implement Logout */}
+        {/* Implement Logout */}
          <SidebarMenu>
             <SidebarMenuItem>
                  <SidebarMenuButton
                    tooltip="Logout"
                    className="text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
-                    disabled={isLoading || !currentUserRole} // Disable if loading or not logged in
+                    disabled={isLoading || !currentUserRole || isLoggingOut} // Disable if loading, not logged in, or logging out
+                    onClick={handleLogout}
                  >
                     <LogOut />
                     <span className="group-data-[collapsible=icon]:hidden">Logout</span>
@@ -205,4 +233,4 @@ export function AppSidebar() {
   );
 }
 
-    
+

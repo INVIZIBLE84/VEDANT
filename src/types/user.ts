@@ -31,82 +31,116 @@ export interface AuthUser extends UserProfile {
   isAuthenticated: boolean;
 }
 
+// --- Mock Authentication State Simulation ---
+// In a real app, this state would be managed by your auth provider context or global state management.
+let isUserLoggedInGlobally = false;
+let currentMockRole: UserRole | null = null;
+
+/**
+ * Simulates logging in a user by setting the global mock state.
+ * @param role The role of the user logging in.
+ */
+export async function loginUser(role: UserRole) {
+  console.log(`Simulating login for role: ${role}`);
+  isUserLoggedInGlobally = true;
+  currentMockRole = role;
+  // In a real app, you'd store tokens/session info here.
+}
+
+/**
+ * Simulates logging out a user by clearing the global mock state.
+ */
+export async function logoutUser() {
+  console.log("Simulating logout");
+  isUserLoggedInGlobally = false;
+  currentMockRole = null;
+   // In a real app, you'd clear tokens/session info here and potentially call the auth provider's logout.
+}
+// --- End Mock Authentication State Simulation ---
+
+
 // Mock function to simulate fetching the current user
 // In a real app, this would interact with your authentication provider (e.g., Firebase Auth)
 export async function getCurrentUser(): Promise<AuthUser | null> {
-   // Simulate fetching based on a mock role
-   // CHANGE THIS VALUE TO TEST DIFFERENT ROLES: "student", "faculty", "admin", "print_cell", "clearance_officer"
-   const MOCK_ROLE: UserRole = "admin";
+   console.log(`getCurrentUser called. Logged in: ${isUserLoggedInGlobally}, Role: ${currentMockRole}`);
+   // If not logged in (based on our simulation), return null immediately.
+   if (!isUserLoggedInGlobally || !currentMockRole) {
+     console.log("Returning null (not logged in).");
+     return null;
+   }
+
    const MOCK_ID_MAP = {
        student: "student123",
        faculty: "faculty999",
        admin: "admin001",
        print_cell: "printcell007",
-       clearance_officer: "clearance01" // Added ID for clearance_officer
+       clearance_officer: "clearance01"
    };
 
    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate async fetch
 
-    if (MOCK_ROLE === 'student') {
-        return {
-            id: MOCK_ID_MAP.student,
-            name: "Alice Smith",
-            email: "alice.smith@campusconnect.edu",
-            role: "student",
-            studentId: "S12345",
-            department: "Computer Science",
-            avatarUrl: "https://picsum.photos/seed/alice/100/100",
-            isAuthenticated: true,
-            isLocked: false,
-        };
-    } else if (MOCK_ROLE === 'faculty') {
-         return {
-             id: MOCK_ID_MAP.faculty,
-             name: "Dr. Alan Turing",
-             email: "alan.turing@campusconnect.edu",
-             role: "faculty",
-             facultyId: "F999",
-             department: "Computer Science",
-             avatarUrl: "https://picsum.photos/seed/turing/100/100",
-             isAuthenticated: true,
-             isLocked: false,
-         };
-    } else if (MOCK_ROLE === 'admin') {
-         return {
-             id: MOCK_ID_MAP.admin,
-             name: "Admin User",
-             email: "admin@campusconnect.edu",
-             role: "admin",
-             department: "Administration",
-             avatarUrl: "https://picsum.photos/seed/admin/100/100",
-             isAuthenticated: true,
-             isLocked: false,
-         };
-    } else if (MOCK_ROLE === 'print_cell') {
-         return {
-            id: MOCK_ID_MAP.print_cell,
-            name: "Print Operator",
-            email: "print.cell@campusconnect.edu",
-            role: "print_cell",
-            department: "Printing Services",
-            avatarUrl: "https://picsum.photos/seed/print/100/100",
-            isAuthenticated: true,
-            isLocked: false,
-         };
-    } else if (MOCK_ROLE === 'clearance_officer') { // Added clearance_officer user
-         return {
-            id: MOCK_ID_MAP.clearance_officer,
-            name: "Clearance Officer Lib",
-            email: "library.clear@campusconnect.edu",
-            role: "clearance_officer",
-            department: "Library", // Department determines which steps they handle
-            avatarUrl: "https://picsum.photos/seed/library/100/100",
-            isAuthenticated: true,
-            isLocked: false,
-         };
+    // Return user data based on the simulated logged-in role
+    switch (currentMockRole) {
+        case 'student':
+            return {
+                id: MOCK_ID_MAP.student,
+                name: "Alice Smith",
+                email: "alice.smith@campusconnect.edu",
+                role: "student",
+                studentId: "S12345",
+                department: "Computer Science",
+                avatarUrl: "https://picsum.photos/seed/alice/100/100",
+                isAuthenticated: true,
+                isLocked: false,
+            };
+        case 'faculty':
+             return {
+                 id: MOCK_ID_MAP.faculty,
+                 name: "Dr. Alan Turing",
+                 email: "alan.turing@campusconnect.edu",
+                 role: "faculty",
+                 facultyId: "F999",
+                 department: "Computer Science",
+                 avatarUrl: "https://picsum.photos/seed/turing/100/100",
+                 isAuthenticated: true,
+                 isLocked: false,
+             };
+        case 'admin':
+             return {
+                 id: MOCK_ID_MAP.admin,
+                 name: "Admin User",
+                 email: "admin@campusconnect.edu",
+                 role: "admin",
+                 department: "Administration",
+                 avatarUrl: "https://picsum.photos/seed/admin/100/100",
+                 isAuthenticated: true,
+                 isLocked: false,
+             };
+        case 'print_cell':
+             return {
+                id: MOCK_ID_MAP.print_cell,
+                name: "Print Operator",
+                email: "print.cell@campusconnect.edu",
+                role: "print_cell",
+                department: "Printing Services",
+                avatarUrl: "https://picsum.photos/seed/print/100/100",
+                isAuthenticated: true,
+                isLocked: false,
+             };
+        case 'clearance_officer':
+             return {
+                id: MOCK_ID_MAP.clearance_officer,
+                name: "Clearance Officer Lib",
+                email: "library.clear@campusconnect.edu",
+                role: "clearance_officer",
+                department: "Library",
+                avatarUrl: "https://picsum.photos/seed/library/100/100",
+                isAuthenticated: true,
+                isLocked: false,
+             };
+        default:
+          // Should not happen if currentMockRole is set, but handle defensively
+          console.log("Returning null (unknown role or state inconsistency).");
+          return null;
     }
-
-
-  // Simulate not logged in
-  return null;
 }
