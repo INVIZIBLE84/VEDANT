@@ -13,10 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, Upload, Search, Filter, Edit, Trash2, KeyRound, Lock, Unlock, Loader2 } from "lucide-react";
 import { AuthUser, UserRole } from "@/types/user"; // Use existing user type
-import { getUsers, addUser, updateUser, deleteUser, resetPassword, toggleUserLock, importUsers, type AdminUserFilters, type UserUpdateData } from "@/services/admin"; // Import admin service functions
+import { getUsers, updateUser, deleteUser, resetPassword, toggleUserLock, importUsers, type AdminUserFilters, type UserUpdateData } from "@/services/admin"; // Removed addUser import here, using dedicated page
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import Link from "next/link"; // Added Link import
 
 export default function AdminUsersPage() {
     const { toast } = useToast();
@@ -26,13 +27,13 @@ export default function AdminUsersPage() {
     const [showUserDialog, setShowUserDialog] = React.useState(false);
     const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null); // For editing
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [isActionLoading, setIsActionLoading] = React.useState<Record<string, boolean>>({}); // For delete, lock, reset password actions
 
     // Fetch users on mount and filter change
     React.useEffect(() => {
         const fetchUsersData = async () => {
             setIsLoading(true);
             try {
-                // TODO: Implement actual getUsers API call with filters
                 const fetchedUsers = await getUsers(filters);
                 setUsers(fetchedUsers);
             } catch (error) {
@@ -42,7 +43,6 @@ export default function AdminUsersPage() {
                 setIsLoading(false);
             }
         };
-        // Debounce or add a button to trigger fetch? For now, fetch on filter change.
         const timer = setTimeout(() => fetchUsersData(), 300); // Simple debounce
         return () => clearTimeout(timer);
     }, [filters, toast]);
@@ -51,8 +51,10 @@ export default function AdminUsersPage() {
         setFilters(prev => ({ ...prev, [key]: value === 'all' || value === '' ? undefined : value }));
     };
 
-    const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    const handleEditFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (!currentUser) return; // Only for editing
+
         setIsSubmitting(true);
         const formData = new FormData(event.currentTarget);
         const userData: UserUpdateData = {
@@ -62,20 +64,10 @@ export default function AdminUsersPage() {
             department: formData.get('department') as string || undefined,
             studentId: formData.get('studentId') as string || undefined,
             facultyId: formData.get('facultyId') as string || undefined,
-            // Password handled separately (add or reset)
         };
 
         try {
-            let result;
-            if (currentUser) { // Editing existing user
-                result = await updateUser(currentUser.id, userData);
-            } else { // Adding new user
-                 const password = formData.get('password') as string; // Only for new user
-                  if (!password) throw new Error("Password is required for new users.");
-                 // TODO: Add password confirmation
-                 result = await addUser({ ...userData, password });
-            }
-
+            const result = await updateUser(currentUser.id, userData);
             if (result.success) {
                 toast({ title: "Success", description: result.message });
                 setShowUserDialog(false);
@@ -87,7 +79,7 @@ export default function AdminUsersPage() {
                  toast({ variant: "destructive", title: "Error", description: result.message });
             }
         } catch (error: any) {
-            console.error("Error submitting user form:", error);
+            console.error("Error updating user:", error);
             toast({ variant: "destructive", title: "Operation Failed", description: error.message || "Could not save user." });
         } finally {
             setIsSubmitting(false);
@@ -101,7 +93,7 @@ export default function AdminUsersPage() {
 
     const handleDelete = async (userId: string, userName: string) => {
         if (!confirm(`Are you sure you want to delete user "${userName}" (${userId})? This action cannot be undone.`)) return;
-         setIsLoading(true); // Use general loading or specific state
+         setIsActionLoading(prev => ({ ...prev, [`delete-${userId}`]: true }));
          try {
              const result = await deleteUser(userId);
              if (result.success) {
@@ -116,44 +108,46 @@ export default function AdminUsersPage() {
              console.error("Error deleting user:", error);
              toast({ variant: "destructive", title: "Delete Failed", description: error.message || "Could not delete user." });
          } finally {
-            setIsLoading(false);
+            setIsActionLoading(prev => ({ ...prev, [`delete-${userId}`]: false }));
          }
     };
 
      const handleResetPassword = async (userId: string, userName: string) => {
          if (!confirm(`Are you sure you want to reset the password for "${userName}" (${userId})?`)) return;
-         // Consider using a loading state for the specific action
+         setIsActionLoading(prev => ({ ...prev, [`reset-${userId}`]: true }));
          try {
              const result = await resetPassword(userId);
              if (result.success) {
                  toast({ title: "Success", description: result.message + (result.newPassword ? ` New password: ${result.newPassword}` : '') });
-                 // Optionally show the new password in a more secure way or just confirm reset
              } else {
                  toast({ variant: "destructive", title: "Error", description: result.message });
              }
          } catch (error: any) {
               console.error("Error resetting password:", error);
              toast({ variant: "destructive", title: "Reset Failed", description: error.message || "Could not reset password." });
+         } finally {
+             setIsActionLoading(prev => ({ ...prev, [`reset-${userId}`]: false }));
          }
      };
 
      const handleToggleLock = async (userId: string, isLocked: boolean) => {
          const actionText = isLocked ? "unlock" : "lock";
          if (!confirm(`Are you sure you want to ${actionText} the account for user ${userId}?`)) return;
-         // Consider specific loading state
+         setIsActionLoading(prev => ({ ...prev, [`lock-${userId}`]: true }));
          try {
              const result = await toggleUserLock(userId, !isLocked); // Send the desired new lock state
              if (result.success) {
                  toast({ title: "Success", description: result.message });
-                  // Refresh list
-                  const fetchedUsers = await getUsers(filters);
-                  setUsers(fetchedUsers);
+                  // Refresh list by updating local state
+                  setUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, isLocked: !isLocked } : u));
              } else {
                   toast({ variant: "destructive", title: "Error", description: result.message });
              }
          } catch (error: any) {
               console.error(`Error ${actionText}ing user:`, error);
              toast({ variant: "destructive", title: "Action Failed", description: error.message || `Could not ${actionText} user.` });
+         } finally {
+             setIsActionLoading(prev => ({ ...prev, [`lock-${userId}`]: false }));
          }
      };
 
@@ -161,8 +155,7 @@ export default function AdminUsersPage() {
          const file = event.target.files?.[0];
          if (!file) return;
 
-         // Show loading indicator for import
-         setIsLoading(true);
+         setIsLoading(true); // Use general loading for import action
          try {
              const result = await importUsers(file);
              if (result.success) {
@@ -178,8 +171,7 @@ export default function AdminUsersPage() {
              toast({ variant: "destructive", title: "Import Error", description: error.message || "An unexpected error occurred during import." });
          } finally {
             setIsLoading(false);
-            // Reset file input
-            event.target.value = '';
+            event.target.value = ''; // Reset file input
          }
      };
 
@@ -192,87 +184,79 @@ export default function AdminUsersPage() {
                      <Button variant="outline" asChild>
                         <Label htmlFor="import-users">
                             <Upload className="mr-2 h-4 w-4" /> Import Users
-                             {/* Hidden file input */}
                              <input id="import-users" type="file" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" className="sr-only" onChange={handleImport} />
                          </Label>
                      </Button>
-                    <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) setCurrentUser(null); setShowUserDialog(open); }}>
-                        <DialogTrigger asChild>
-                            <Button className="bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setCurrentUser(null)}>
-                                <PlusCircle className="mr-2 h-4 w-4" /> Add User
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-lg">
-                             <DialogHeader>
-                                <DialogTitle>{currentUser ? 'Edit User' : 'Add New User'}</DialogTitle>
-                                <DialogDescription>{currentUser ? `Update details for ${currentUser.name}` : 'Enter details for the new user.'}</DialogDescription>
-                             </DialogHeader>
-                             <form onSubmit={handleFormSubmit} className="grid gap-4 py-4">
-                                 {/* Common Fields */}
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="name" className="text-right">Name</Label>
-                                    <Input id="name" name="name" defaultValue={currentUser?.name} required className="col-span-3" />
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                    <Label htmlFor="email" className="text-right">Email</Label>
-                                    <Input id="email" name="email" type="email" defaultValue={currentUser?.email} required className="col-span-3" />
-                                </div>
-                                 {!currentUser && ( // Only show password for new users
-                                     <div className="grid grid-cols-4 items-center gap-4">
-                                         <Label htmlFor="password" className="text-right">Password</Label>
-                                         <Input id="password" name="password" type="password" required className="col-span-3" />
-                                     </div>
-                                      // TODO: Add password confirmation field
-                                 )}
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                     <Label htmlFor="role" className="text-right">Role</Label>
-                                    <Select name="role" defaultValue={currentUser?.role} required>
-                                        <SelectTrigger className="col-span-3">
-                                            <SelectValue placeholder="Select role" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                             {/* TODO: Dynamically list roles */}
-                                             <SelectItem value="student">Student</SelectItem>
-                                             <SelectItem value="faculty">Faculty</SelectItem>
-                                             <SelectItem value="admin">Admin</SelectItem>
-                                             <SelectItem value="print_cell">Print Cell</SelectItem>
-                                             <SelectItem value="clearance_officer">Clearance Officer</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid grid-cols-4 items-center gap-4">
-                                     <Label htmlFor="department" className="text-right">Department</Label>
-                                     <Input id="department" name="department" defaultValue={currentUser?.department} className="col-span-3" />
-                                </div>
-                                 {/* Role-specific fields */}
-                                 {/* TODO: Conditionally render based on selected role */}
-                                 <div className="grid grid-cols-4 items-center gap-4">
-                                     <Label htmlFor="studentId" className="text-right">Student ID</Label>
-                                     <Input id="studentId" name="studentId" defaultValue={currentUser?.studentId} className="col-span-3" placeholder="If student"/>
-                                 </div>
-                                  <div className="grid grid-cols-4 items-center gap-4">
-                                     <Label htmlFor="facultyId" className="text-right">Faculty ID</Label>
-                                     <Input id="facultyId" name="facultyId" defaultValue={currentUser?.facultyId} className="col-span-3" placeholder="If faculty"/>
-                                 </div>
-
-                                <DialogFooter>
-                                    <Button type="button" variant="ghost" onClick={() => {setShowUserDialog(false); setCurrentUser(null);}}>Cancel</Button>
-                                    <Button type="submit" disabled={isSubmitting}>
-                                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                                         {currentUser ? 'Save Changes' : 'Add User'}
-                                    </Button>
-                                </DialogFooter>
-                             </form>
-                        </DialogContent>
-                    </Dialog>
+                    {/* Changed Button to Link */}
+                    <Link href="/admin/register">
+                        <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add New User
+                        </Button>
+                    </Link>
                  </div>
             </div>
+
+            {/* Edit User Dialog */}
+            <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) setCurrentUser(null); setShowUserDialog(open); }}>
+                 <DialogContent className="max-w-lg">
+                     <DialogHeader>
+                        <DialogTitle>Edit User</DialogTitle>
+                        <DialogDescription>Update details for {currentUser?.name}</DialogDescription>
+                     </DialogHeader>
+                     {/* Edit Form */}
+                     <form onSubmit={handleEditFormSubmit} className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-name" className="text-right">Name</Label>
+                            <Input id="edit-name" name="name" defaultValue={currentUser?.name} required className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="edit-email" className="text-right">Email</Label>
+                            <Input id="edit-email" name="email" type="email" defaultValue={currentUser?.email} required className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                             <Label htmlFor="edit-role" className="text-right">Role</Label>
+                            <Select name="role" defaultValue={currentUser?.role} required>
+                                <SelectTrigger id="edit-role" className="col-span-3">
+                                    <SelectValue placeholder="Select role" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                     <SelectItem value="student">Student</SelectItem>
+                                     <SelectItem value="faculty">Faculty</SelectItem>
+                                     <SelectItem value="admin">Admin</SelectItem>
+                                     <SelectItem value="print_cell">Print Cell</SelectItem>
+                                     <SelectItem value="clearance_officer">Clearance Officer</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                             <Label htmlFor="edit-department" className="text-right">Department</Label>
+                             <Input id="edit-department" name="department" defaultValue={currentUser?.department} className="col-span-3" />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                             <Label htmlFor="edit-studentId" className="text-right">Student ID</Label>
+                             <Input id="edit-studentId" name="studentId" defaultValue={currentUser?.studentId} className="col-span-3" placeholder="If student"/>
+                         </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                             <Label htmlFor="edit-facultyId" className="text-right">Faculty ID</Label>
+                             <Input id="edit-facultyId" name="facultyId" defaultValue={currentUser?.facultyId} className="col-span-3" placeholder="If faculty"/>
+                          </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => {setShowUserDialog(false); setCurrentUser(null);}}>Cancel</Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                 Save Changes
+                            </Button>
+                        </DialogFooter>
+                     </form>
+                 </DialogContent>
+            </Dialog>
+
 
             <Card>
                  <CardHeader>
                     <CardTitle>User List</CardTitle>
                      <CardDescription>Manage user accounts and access.</CardDescription>
-                     {/* Filters */}
                     <div className="flex flex-wrap gap-2 pt-4">
                          <div className="relative flex-grow max-w-xs">
                              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -291,7 +275,6 @@ export default function AdminUsersPage() {
                              </SelectTrigger>
                              <SelectContent>
                                  <SelectItem value="all">All Roles</SelectItem>
-                                  {/* TODO: Dynamically list roles */}
                                  <SelectItem value="student">Student</SelectItem>
                                  <SelectItem value="faculty">Faculty</SelectItem>
                                  <SelectItem value="admin">Admin</SelectItem>
@@ -310,7 +293,6 @@ export default function AdminUsersPage() {
                                  <SelectItem value="locked">Locked</SelectItem>
                              </SelectContent>
                          </Select>
-                         {/* Add Department Filter if needed */}
                          <Button variant="outline" onClick={() => setFilters({})}>Clear Filters</Button>
                      </div>
                  </CardHeader>
@@ -343,45 +325,43 @@ export default function AdminUsersPage() {
                                     <TableRow key={user.id}>
                                         <TableCell className="font-medium">
                                             {user.name}
-                                             {user.studentId && <span className="block text-xs text-muted-foreground">ID: {user.studentId}</span>}
-                                             {user.facultyId && <span className="block text-xs text-muted-foreground">ID: {user.facultyId}</span>}
+                                             {(user.studentId || user.facultyId) && <span className="block text-xs text-muted-foreground">ID: {user.studentId || user.facultyId}</span>}
                                         </TableCell>
                                         <TableCell className="hidden md:table-cell text-muted-foreground">{user.email}</TableCell>
                                         <TableCell className="capitalize">{user.role}</TableCell>
                                          <TableCell className="hidden lg:table-cell text-muted-foreground">{user.department || 'N/A'}</TableCell>
                                         <TableCell className="hidden sm:table-cell">
-                                             {/* @ts-ignore Add isLocked to AuthUser if needed */}
                                              <Badge variant={user.isLocked ? "destructive" : "default"} className={cn(!user.isLocked && "bg-green-100 text-green-800")}>
-                                                {/* @ts-ignore */}
                                                  {user.isLocked ? 'Locked' : 'Active'}
                                              </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
                                              <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={Object.values(isActionLoading).some(Boolean)}>
                                                         <span className="sr-only">Open menu</span>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => handleEdit(user)}>
-                                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                                    <DropdownMenuItem onClick={() => handleEdit(user)} disabled={isActionLoading[`edit-${user.id}`]}>
+                                                         {isActionLoading[`edit-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Edit className="mr-2 h-4 w-4" />} Edit
                                                     </DropdownMenuItem>
-                                                     {/* @ts-ignore Add isLocked to AuthUser if needed */}
-                                                     <DropdownMenuItem onClick={() => handleToggleLock(user.id, !!user.isLocked)}>
-                                                         {/* @ts-ignore */}
-                                                        {user.isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />}
-                                                         {/* @ts-ignore */}
-                                                        {user.isLocked ? 'Unlock' : 'Lock'}
+                                                     <DropdownMenuItem onClick={() => handleToggleLock(user.id, !!user.isLocked)} disabled={isActionLoading[`lock-${user.id}`]}>
+                                                         {isActionLoading[`lock-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (user.isLocked ? <Unlock className="mr-2 h-4 w-4" /> : <Lock className="mr-2 h-4 w-4" />)}
+                                                         {user.isLocked ? 'Unlock' : 'Lock'}
                                                      </DropdownMenuItem>
-                                                     <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.name)}>
-                                                         <KeyRound className="mr-2 h-4 w-4" /> Reset Password
+                                                     <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.name)} disabled={isActionLoading[`reset-${user.id}`]}>
+                                                         {isActionLoading[`reset-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />} Reset Password
                                                      </DropdownMenuItem>
                                                      <DropdownMenuSeparator />
-                                                     <DropdownMenuItem className="text-destructive focus:text-destructive-foreground focus:bg-destructive" onClick={() => handleDelete(user.id, user.name)}>
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                     <DropdownMenuItem
+                                                         className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
+                                                         onClick={() => handleDelete(user.id, user.name)}
+                                                         disabled={isActionLoading[`delete-${user.id}`]}
+                                                        >
+                                                        {isActionLoading[`delete-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />} Delete
                                                      </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
