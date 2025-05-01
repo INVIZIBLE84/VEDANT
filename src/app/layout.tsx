@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; // Changed from GeistSans
+import { Inter } from "next/font/google"; // Using Inter as defined
 import "./globals.css";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
@@ -7,8 +7,8 @@ import { Header } from "@/components/layout/header";
 import { AppSidebar } from "@/components/layout/sidebar";
 
 
-const inter = Inter({ // Changed from GeistSans
-  variable: "--font-sans", // Changed variable name
+const inter = Inter({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
@@ -24,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${inter.variable} antialiased`}> {/* Updated font variable */}
+    <html lang="en" suppressHydrationWarning> {/* Added suppressHydrationWarning for theme switching etc. */}
+      <body className={`${inter.variable} font-sans antialiased`}> {/* Ensured font-sans class is applied */}
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>

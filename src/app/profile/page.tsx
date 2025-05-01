@@ -1,36 +1,81 @@
+"use client"; // Required for hooks
+
+import * as React from "react"; // Import React for hooks
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Mail, Phone, User, MapPin, Edit } from "lucide-react";
+import { Mail, Phone, User, MapPin, Edit, AlertCircle } from "lucide-react"; // Added AlertCircle
+import { AuthUser, getCurrentUser } from "@/types/user"; // Import types and fetch function
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Import Alert components
 
-// TODO: Replace with actual data fetching based on logged-in user
-interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: string; // e.g., 'Student', 'Faculty', 'Admin'
-  studentId?: string; // Optional: Only for students
-  department?: string; // Optional: For faculty/students
-  phone?: string;
-  address?: string;
-  avatarUrl: string;
-}
+export default function ProfilePage() {
+  const [user, setUser] = React.useState<AuthUser | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-const sampleUserProfile: UserProfile = {
-  id: 'admin1',
-  name: "Admin User",
-  email: "admin@campusconnect.edu",
-  role: "Administrator",
-  phone: "+1 234 567 890",
-  address: "123 College Ave, Admin Building, Campus City",
-  avatarUrl: "https://picsum.photos/100/100?random=1",
-  department: "IT Department"
-};
+   // Fetch user data on mount
+   React.useEffect(() => {
+     const fetchUser = async () => {
+       setIsLoading(true);
+       const currentUser = await getCurrentUser();
+       setUser(currentUser);
+       setIsLoading(false);
+     };
+     fetchUser();
+   }, []);
 
-export default async function ProfilePage() {
-  // In a real app, fetch user profile based on authentication
-  const user = sampleUserProfile;
-  const initials = user.name.split(' ').map(n => n[0]).join('');
+
+  const getInitials = (name: string | undefined) => {
+     return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+  }
+
+   // Loading State
+   if (isLoading) {
+     return (
+        <div className="space-y-6">
+             <h1 className="text-3xl font-bold text-primary">My Profile</h1>
+             <Card className="overflow-hidden">
+                 <CardHeader className="flex flex-col items-center gap-4 bg-muted/30 p-6 text-center sm:flex-row sm:text-left">
+                    <Skeleton className="h-24 w-24 rounded-full" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-6 w-40 rounded" />
+                        <Skeleton className="h-4 w-32 rounded" />
+                        <Skeleton className="h-4 w-24 rounded" />
+                    </div>
+                     <Skeleton className="h-9 w-9 rounded ml-auto absolute top-4 right-4 sm:static" />
+                 </CardHeader>
+                 <CardContent className="p-6 space-y-4">
+                     <Skeleton className="h-5 w-36 mb-2 rounded" />
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <InfoItemSkeleton />
+                        <InfoItemSkeleton />
+                        <InfoItemSkeleton />
+                     </div>
+                 </CardContent>
+             </Card>
+        </div>
+     )
+   }
+
+   // Not Logged In State
+   if (!user) {
+        return (
+            <div className="space-y-6">
+                <h1 className="text-3xl font-bold text-primary">My Profile</h1>
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Not Logged In</AlertTitle>
+                    <AlertDescription>
+                    You need to be logged in to view your profile.
+                    {/* TODO: Add Login Link/Button */}
+                    </AlertDescription>
+                </Alert>
+            </div>
+        )
+   }
+
+   // Logged In State
+  const initials = getInitials(user.name);
 
   return (
     <div className="space-y-6">
@@ -44,8 +89,9 @@ export default async function ProfilePage() {
           </Avatar>
           <div className="space-y-1">
             <CardTitle className="text-2xl">{user.name}</CardTitle>
-            <CardDescription className="text-muted-foreground">{user.role}{user.department ? ` - ${user.department}` : ''}</CardDescription>
-            {user.studentId && <p className="text-sm text-muted-foreground">ID: {user.studentId}</p>}
+            <CardDescription className="text-muted-foreground capitalize">{user.role}{user.department ? ` - ${user.department}` : ''}</CardDescription>
+            {user.studentId && <p className="text-sm text-muted-foreground">Student ID: {user.studentId}</p>}
+             {user.facultyId && <p className="text-sm text-muted-foreground">Faculty ID: {user.facultyId}</p>}
           </div>
            <Button variant="outline" size="icon" className="ml-auto absolute top-4 right-4 sm:static">
               <Edit className="h-4 w-4" />
@@ -82,6 +128,19 @@ function InfoItem({ icon, label, value }: InfoItemProps) {
             <div>
                 <p className="text-sm font-medium">{label}</p>
                 <p className="text-sm text-foreground">{value}</p>
+            </div>
+        </div>
+    )
+}
+
+// Skeleton component for InfoItem
+function InfoItemSkeleton() {
+    return (
+        <div className="flex items-start gap-3">
+             <Skeleton className="h-5 w-5 rounded mt-1" />
+            <div className="space-y-1.5">
+                <Skeleton className="h-4 w-16 rounded" />
+                <Skeleton className="h-4 w-32 rounded" />
             </div>
         </div>
     )

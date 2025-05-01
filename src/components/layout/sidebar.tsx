@@ -13,11 +13,10 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut } from "lucide-react";
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock } from "lucide-react"; // Added Bell, CalendarClock
 import { cn } from "@/lib/utils";
-
-// TODO: Implement role-based access control
-type UserRole = "student" | "faculty" | "admin";
+import { UserRole, getCurrentUser } from "@/types/user"; // Import UserRole and fetch function
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 
 interface NavItem {
   href: string;
@@ -31,16 +30,32 @@ const navItems: NavItem[] = [
   { href: "/attendance", label: "Attendance", icon: <BarChart3 />, roles: ["student", "faculty", "admin"] },
   { href: "/fees", label: "Fees", icon: <DollarSign />, roles: ["student", "admin"] },
   { href: "/clearance", label: "Clearance", icon: <CheckCircle />, roles: ["student", "admin"] },
+  { href: "/schedule", label: "Schedule", icon: <CalendarClock />, roles: ["student", "faculty"] }, // Added Schedule
   { href: "/documents", label: "Documents", icon: <FileText />, roles: ["student", "faculty", "admin"] },
+  { href: "/notifications", label: "Notifications", icon: <Bell />, roles: ["student", "faculty", "admin"] }, // Added Notifications
   { href: "/profile", label: "Profile", icon: <User />, roles: ["student", "faculty", "admin"] },
   { href: "/settings", label: "Settings", icon: <Settings />, roles: ["admin"] }, // Example: Settings only for admin
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const currentUserRole: UserRole = "admin"; // TODO: Replace with actual user role from context/auth
+  const [currentUserRole, setCurrentUserRole] = React.useState<UserRole | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
-  const filteredNavItems = navItems.filter(item => item.roles.includes(currentUserRole));
+
+   // Fetch user role on component mount
+   React.useEffect(() => {
+     const fetchUserRole = async () => {
+       setIsLoading(true);
+       const user = await getCurrentUser(); // Fetch the current user
+       setCurrentUserRole(user?.role ?? null); // Set the role, default to null if no user
+       setIsLoading(false);
+     };
+     fetchUserRole();
+   }, []);
+
+
+  const filteredNavItems = navItems.filter(item => currentUserRole && item.roles.includes(currentUserRole));
 
   return (
     <Sidebar collapsible="icon">
@@ -60,28 +75,49 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
-          {filteredNavItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
-                  tooltip={item.label}
-                  className={cn(
-                    "transition-colors duration-200",
-                     pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
-                      ? "bg-primary/10 text-primary hover:bg-primary/20"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  <a>
-                    {item.icon}
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </a>
-                </SidebarMenuButton>
-              </Link>
-            </SidebarMenuItem>
-          ))}
+           {isLoading ? (
+             // Show Skeleton loaders while fetching user role
+             Array.from({ length: 5 }).map((_, index) => (
+                <SidebarMenuItem key={`skel-${index}`}>
+                     <SidebarMenuButton asChild disabled className="cursor-wait">
+                         <a>
+                             <Skeleton className="h-5 w-5 rounded" />
+                            <Skeleton className="h-4 w-20 ml-2 group-data-[collapsible=icon]:hidden" />
+                         </a>
+                     </SidebarMenuButton>
+                </SidebarMenuItem>
+             ))
+           ) : (
+              filteredNavItems.map((item) => (
+                <SidebarMenuItem key={item.href}>
+                  <Link href={item.href} legacyBehavior passHref>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))}
+                      tooltip={item.label}
+                      className={cn(
+                        "transition-colors duration-200",
+                         pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+                          ? "bg-primary/10 text-primary hover:bg-primary/20"
+                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      )}
+                    >
+                      <a>
+                        {item.icon}
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              ))
+           )}
+           {!isLoading && !currentUserRole && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton disabled>
+                        <span className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">Login Required</span>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+           )}
         </SidebarMenu>
       </SidebarContent>
        <SidebarFooter className="p-2 mt-auto">
@@ -91,6 +127,7 @@ export function AppSidebar() {
                  <SidebarMenuButton
                    tooltip="Logout"
                    className="text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
+                    disabled={isLoading || !currentUserRole} // Disable if loading or not logged in
                  >
                     <LogOut />
                     <span className="group-data-[collapsible=icon]:hidden">Logout</span>
