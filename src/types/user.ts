@@ -1,7 +1,7 @@
 /**
  * Defines the possible roles a user can have within the application.
  */
-export type UserRole = "student" | "faculty" | "admin";
+export type UserRole = "student" | "faculty" | "admin" | "print_cell"; // Added print_cell
 
 /**
  * Represents the profile information for a user.
@@ -33,11 +33,13 @@ export interface AuthUser extends UserProfile {
 // In a real app, this would interact with your authentication provider (e.g., Firebase Auth)
 export async function getCurrentUser(): Promise<AuthUser | null> {
    // Simulate fetching based on a mock role
-   const MOCK_ROLE: UserRole = "student"; // Change this to 'faculty' or 'admin' for testing
+   // CHANGE THIS VALUE TO TEST DIFFERENT ROLES: "student", "faculty", "admin", "print_cell"
+   const MOCK_ROLE: UserRole = "faculty";
    const MOCK_ID_MAP = {
        student: "student123",
        faculty: "faculty999",
-       admin: "admin001"
+       admin: "admin001",
+       print_cell: "printcell007" // Added ID for print_cell
    };
 
    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate async fetch
@@ -70,10 +72,22 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              name: "Admin User",
              email: "admin@campusconnect.edu",
              role: "admin",
+             department: "Administration", // Added department for admin
              avatarUrl: "https://picsum.photos/seed/admin/100/100",
              isAuthenticated: true,
          };
+    } else if (MOCK_ROLE === 'print_cell') { // Added print_cell user
+         return {
+            id: MOCK_ID_MAP.print_cell,
+            name: "Print Operator",
+            email: "print.cell@campusconnect.edu",
+            role: "print_cell",
+            department: "Printing Services",
+            avatarUrl: "https://picsum.photos/seed/print/100/100",
+            isAuthenticated: true,
+         };
     }
+
 
   // Simulate not logged in
   return null;

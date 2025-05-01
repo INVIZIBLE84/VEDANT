@@ -26,14 +26,14 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: <LayoutDashboard />, roles: ["student", "faculty", "admin"] },
+  { href: "/", label: "Dashboard", icon: <LayoutDashboard />, roles: ["student", "faculty", "admin", "print_cell"] },
   { href: "/attendance", label: "Attendance", icon: <BarChart3 />, roles: ["student", "faculty", "admin"] },
   { href: "/fees", label: "Fees", icon: <DollarSign />, roles: ["student", "admin"] },
-  { href: "/clearance", label: "Clearance", icon: <CheckCircle />, roles: ["student", "admin"] },
-  { href: "/schedule", label: "Schedule", icon: <CalendarClock />, roles: ["student", "faculty"] }, // Added Schedule
-  { href: "/documents", label: "Documents", icon: <FileText />, roles: ["student", "faculty", "admin"] },
-  { href: "/notifications", label: "Notifications", icon: <Bell />, roles: ["student", "faculty", "admin"] }, // Added Notifications
-  { href: "/profile", label: "Profile", icon: <User />, roles: ["student", "faculty", "admin"] },
+  { href: "/clearance", label: "Clearance", icon: <CheckCircle />, roles: ["student", "faculty", "admin"] }, // Faculty added for approval
+  { href: "/schedule", label: "Schedule", icon: <CalendarClock />, roles: ["student", "faculty"] },
+  { href: "/documents", label: "Documents", icon: <FileText />, roles: ["student", "faculty", "admin", "print_cell"] }, // Added print_cell
+  { href: "/notifications", label: "Notifications", icon: <Bell />, roles: ["student", "faculty", "admin", "print_cell"] },
+  { href: "/profile", label: "Profile", icon: <User />, roles: ["student", "faculty", "admin", "print_cell"] },
   { href: "/settings", label: "Settings", icon: <Settings />, roles: ["admin"] }, // Example: Settings only for admin
 ];
 
