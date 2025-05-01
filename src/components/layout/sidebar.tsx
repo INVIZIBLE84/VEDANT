@@ -3,6 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image"; // Import next/image
 import { usePathname } from "next/navigation";
 import {
   Sidebar,
@@ -14,7 +15,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react";
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Keep BellRing if used elsewhere, or remove if replaced fully by Bell
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser } from "@/types/user"; // Import UserRole and fetch function
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -53,7 +54,7 @@ const navItems: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
   { href: "/admin/logs", label: "Logs", icon: <FileText />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/broadcasts", label: "Broadcasts", icon: <Activity />, roles: ["admin"], isAdminSection: true }, // Changed icon to Activity as Bell was duplicate
+  { href: "/admin/broadcasts", label: "Broadcasts", icon: <Activity />, roles: ["admin"], isAdminSection: true },
 ];
 
 export function AppSidebar() {
@@ -124,51 +125,15 @@ export function AppSidebar() {
       <SidebarHeader className="flex items-center justify-between p-4">
          {/* Logo/App Name for Sidebar */}
          <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-             {/* New S.P.A.R.K. Logo */}
-             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className="h-8 w-8 text-primary">
-                <rect x="14" y="14" width="36" height="36" rx="4" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.5"/>
-                <text x="32" y="25" fontFamily="sans-serif" fontSize="6" fill="currentColor" textAnchor="middle">CYBER SENTINELS</text>
-                <text x="32" y="46" fontFamily="sans-serif" fontSize="20" fontWeight="bold" fill="currentColor" textAnchor="middle">
-                    S.P<tspan fill="hsl(var(--accent))" fontSize="24">A</tspan>R.K.
-                </text>
-
-                 {/* Circuit Lines - simplified paths */}
-                <path d="M14 20 h-4 v-4 h-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="6" cy="16" r="2" fill="currentColor"/>
-                 <path d="M14 28 h-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="6" cy="28" r="2" fill="currentColor"/>
-                 <path d="M14 36 h-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="6" cy="36" r="2" fill="currentColor"/>
-                <path d="M14 44 h-4 v4 h-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="6" cy="48" r="2" fill="currentColor"/>
-
-                <path d="M50 20 h4 v-4 h2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="58" cy="16" r="2" fill="currentColor"/>
-                 <path d="M50 28 h6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="58" cy="28" r="2" fill="currentColor"/>
-                 <path d="M50 36 h6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="58" cy="36" r="2" fill="currentColor"/>
-                <path d="M50 44 h4 v4 h2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="58" cy="48" r="2" fill="currentColor"/>
-
-                <path d="M20 14 v-4 h-4 v-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="16" cy="6" r="2" fill="currentColor"/>
-                 <path d="M28 14 v-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="28" cy="6" r="2" fill="currentColor"/>
-                 <path d="M36 14 v-6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="36" cy="6" r="2" fill="currentColor"/>
-                 <path d="M44 14 v-4 h4 v-2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="48" cy="6" r="2" fill="currentColor"/>
-
-                <path d="M20 50 v4 h-4 v2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                 <circle cx="16" cy="58" r="2" fill="currentColor"/>
-                 <path d="M28 50 v6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="28" cy="58" r="2" fill="currentColor"/>
-                 <path d="M36 50 v6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
-                 <circle cx="36" cy="58" r="2" fill="currentColor"/>
-                 <path d="M44 50 v4 h4 v2" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="48" cy="58" r="2" fill="currentColor"/>
-            </svg>
+             {/* User should place their logo image at /public/spark-logo.png */}
+             <Image
+                src="/spark-logo.png"
+                alt="S.P.A.R.K. Logo"
+                width={32}
+                height={32}
+                className="h-8 w-8" // Adjust size as needed
+                priority // Load logo quickly
+             />
            <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground">CampusConnect</span>
          </Link>
          {/* Mobile trigger might be redundant if header handles it, but keep for potential standalone use */}
@@ -239,3 +204,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    
