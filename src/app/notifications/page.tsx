@@ -1,27 +1,18 @@
+"use client"; // Needed for useState, useEffect
+
+import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bell, AlertTriangle, CheckCircle, Info } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Bell, AlertTriangle, CheckCircle, Info, Loader2, Trash2, EyeOff, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, deleteNotification, type Notification, type NotificationType } from "@/services/notifications"; // Assuming service exists
+import { AuthUser, getCurrentUser } from "@/types/user";
+import { useToast } from "@/hooks/use-toast";
+import { formatDistanceToNow } from 'date-fns';
 
-// TODO: Replace with actual data fetching from a service
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error'; // Controls styling/icon
-  timestamp: string;
-  isRead: boolean;
-}
-
-// Sample data
-const sampleNotifications: Notification[] = [
-  { id: 'n1', title: 'Fee Payment Reminder', message: 'Your semester fee payment is due next week.', type: 'warning', timestamp: '2024-07-23 10:00:00', isRead: false },
-  { id: 'n2', title: 'Library Book Overdue', message: 'The book "Intro to Algorithms" is overdue. Please return it soon.', type: 'error', timestamp: '2024-07-22 15:30:00', isRead: false },
-  { id: 'n3', title: 'Class Rescheduled', message: 'CS101 class on Wednesday is rescheduled to 14:00.', type: 'info', timestamp: '2024-07-22 09:00:00', isRead: true },
-  { id: 'n4', title: 'Clearance Approved', message: 'Your library clearance has been approved.', type: 'success', timestamp: '2024-07-21 11:00:00', isRead: true },
-  { id: 'n5', title: 'Campus Event', message: 'Join the annual tech fest this weekend!', type: 'info', timestamp: '2024-07-20 16:00:00', isRead: true },
-];
-
-const getNotificationStyle = (type: Notification['type']) => {
+const getNotificationStyle = (type: NotificationType) => {
   switch (type) {
     case 'warning': return { icon: <AlertTriangle className="text-yellow-500" />, borderClass: "border-l-yellow-500" };
     case 'error': return { icon: <AlertTriangle className="text-red-500" />, borderClass: "border-l-red-500" };
@@ -31,62 +22,167 @@ const getNotificationStyle = (type: Notification['type']) => {
   }
 };
 
-export default async function NotificationsPage() {
-  // In a real app, fetch notifications for the logged-in user
-  const notifications: Notification[] = sampleNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Sort newest first
+export default function NotificationsPage() {
+    const { toast } = useToast();
+    const [user, setUser] = React.useState<AuthUser | null>(null);
+    const [notifications, setNotifications] = React.useState<Notification[]>([]);
+    const [isLoading, setIsLoading] = React.useState(true);
+    const [activeTab, setActiveTab] = React.useState<"all" | NotificationType>("all");
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+    // Fetch user and notifications
+    React.useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            const currentUser = await getCurrentUser();
+            setUser(currentUser);
+            if (currentUser) {
+                try {
+                    const fetchedNotifications = await getNotifications(currentUser.id);
+                    setNotifications(fetchedNotifications.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()));
+                } catch (error) {
+                    console.error("Error fetching notifications:", error);
+                    toast({ variant: "destructive", title: "Error", description: "Could not fetch notifications." });
+                }
+            }
+            setIsLoading(false);
+        };
+        fetchData();
+    }, [toast]);
 
-  return (
-    <div className="space-y-6">
-       <div className="flex items-center justify-between">
-         <h1 className="text-3xl font-bold text-primary">Notifications</h1>
-          {unreadCount > 0 && (
-              <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-800">
-                 {unreadCount} New
-             </span>
-          )}
-       </div>
+    const handleMarkRead = async (id: string) => {
+        if (!user) return;
+        try {
+            const success = await markNotificationAsRead(user.id, id);
+            if (success) {
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+                // No toast needed for simple mark as read
+            } else {
+                throw new Error("Failed to mark as read on server.");
+            }
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+            toast({ variant: "destructive", title: "Error", description: "Could not mark notification as read." });
+        }
+    };
 
+     const handleMarkAllRead = async () => {
+         if (!user) return;
+         try {
+             const success = await markAllNotificationsAsRead(user.id);
+             if (success) {
+                 setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                 toast({ title: "Success", description: "All notifications marked as read." });
+             } else {
+                 throw new Error("Failed to mark all as read on server.");
+             }
+         } catch (error) {
+             console.error("Error marking all notifications as read:", error);
+             toast({ variant: "destructive", title: "Error", description: "Could not mark all notifications as read." });
+         }
+     };
 
-      <Card className="transform transition-transform duration-300 hover:shadow-lg">
-        <CardHeader>
-          <CardTitle>Recent Notifications</CardTitle>
-          <CardDescription>Updates and alerts from the college.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {notifications.length > 0 ? (
-            notifications.map((notification) => {
-              const style = getNotificationStyle(notification.type);
-              return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "flex items-start gap-4 rounded-md border border-l-4 p-4 transition-colors hover:bg-muted/50",
-                    style.borderClass,
-                    !notification.isRead && "bg-primary/5"
-                  )}
-                >
-                   <div className="flex-shrink-0 pt-0.5">{style.icon}</div>
-                  <div className="flex-1">
-                    <p className={cn("font-semibold", !notification.isRead && "text-primary")}>{notification.title}</p>
-                    <p className="text-sm text-muted-foreground">{notification.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(notification.timestamp).toLocaleString()}</p>
-                  </div>
-                   {/* TODO: Add mark as read/unread functionality */}
-                   {/* {!notification.isRead && <button className="text-xs text-blue-600 hover:underline">Mark as read</button>} */}
-                </div>
-              );
-            })
-          ) : (
-            <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-               <Bell className="h-12 w-12 mb-4 text-gray-400" />
-               <p>No notifications yet.</p>
-               <p className="text-sm">Check back later for updates.</p>
+    const handleDelete = async (id: string) => {
+         if (!user) return;
+        if (!confirm("Are you sure you want to delete this notification?")) return;
+         try {
+             const success = await deleteNotification(user.id, id);
+             if (success) {
+                 setNotifications(prev => prev.filter(n => n.id !== id));
+                 toast({ title: "Success", description: "Notification deleted." });
+             } else {
+                  throw new Error("Failed to delete notification on server.");
+             }
+         } catch (error) {
+             console.error("Error deleting notification:", error);
+             toast({ variant: "destructive", title: "Error", description: "Could not delete notification." });
+         }
+    };
+
+    const filteredNotifications = React.useMemo(() => {
+        if (activeTab === "all") return notifications;
+        return notifications.filter(n => n.type === activeTab);
+    }, [notifications, activeTab]);
+
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
+                    <Bell /> Notifications
+                     {unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-2">{unreadCount} New</Badge>
+                     )}
+                </h1>
+                 <Button variant="outline" size="sm" onClick={handleMarkAllRead} disabled={unreadCount === 0 || isLoading}>
+                     <Eye className="mr-1 h-4 w-4" /> Mark All as Read
+                 </Button>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+
+            <Card className="transform transition-transform duration-300 hover:shadow-lg">
+                <CardHeader>
+                    <CardTitle>Your Updates</CardTitle>
+                    <CardDescription>Alerts related to attendance, fees, clearance, and announcements.</CardDescription>
+                     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="pt-2">
+                         <TabsList>
+                             <TabsTrigger value="all">All</TabsTrigger>
+                             <TabsTrigger value="info"><Info className="h-4 w-4 mr-1 text-blue-500" />Info</TabsTrigger>
+                             <TabsTrigger value="warning"><AlertTriangle className="h-4 w-4 mr-1 text-yellow-500" />Warnings</TabsTrigger>
+                             <TabsTrigger value="error"><AlertTriangle className="h-4 w-4 mr-1 text-red-500" />Errors</TabsTrigger>
+                             <TabsTrigger value="success"><CheckCircle className="h-4 w-4 mr-1 text-green-500" />Success</TabsTrigger>
+                         </TabsList>
+                     </Tabs>
+                </CardHeader>
+                <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : filteredNotifications.length > 0 ? (
+                        filteredNotifications.map((notification) => {
+                            const style = getNotificationStyle(notification.type);
+                            const timeAgo = formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true });
+                            return (
+                                <div
+                                    key={notification.id}
+                                    className={cn(
+                                        "relative flex items-start gap-4 rounded-md border border-l-4 p-4 transition-colors hover:bg-muted/50 group",
+                                        style.borderClass,
+                                        !notification.isRead && "bg-primary/5 border-primary/20"
+                                    )}
+                                >
+                                    <div className="flex-shrink-0 pt-1">{style.icon}</div>
+                                    <div className="flex-1">
+                                        <p className={cn("font-semibold", !notification.isRead && "text-primary")}>{notification.title}</p>
+                                        <p className="text-sm text-muted-foreground">{notification.message}</p>
+                                        <p className="text-xs text-muted-foreground mt-1">{timeAgo}</p>
+                                         {/* Link to related page */}
+                                         {notification.link && (
+                                            <a href={notification.link} className="text-xs text-accent hover:underline mt-1 inline-block">View Details</a>
+                                         )}
+                                    </div>
+                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {!notification.isRead && (
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Mark as read" onClick={() => handleMarkRead(notification.id)}>
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" title="Delete" onClick={() => handleDelete(notification.id)}>
+                                             <Trash2 className="h-4 w-4" />
+                                         </Button>
+                                     </div>
+                                </div>
+                            );
+                        })
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
+                            <Bell className="h-12 w-12 mb-4 text-gray-400" />
+                            <p>No notifications {activeTab !== 'all' ? `of type "${activeTab}"` : 'yet'}.</p>
+                            <p className="text-sm">Check back later for updates.</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
 }
