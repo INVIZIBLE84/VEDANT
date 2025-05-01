@@ -9,6 +9,7 @@ import { AuthUser, getCurrentUser, UserRole } from "@/types/user";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 // TODO: Fetch real data from admin service
 interface DashboardMetrics {
@@ -89,7 +90,7 @@ export default function AdminDashboardPage() {
                 <SummaryCard
                     title="Pending Actions"
                     value={metrics?.pendingActions.toString() ?? '...'}
-                    icon={<BellRing className="text-yellow-500" />}
+                    icon={<Activity className="text-yellow-500" />} // Changed icon to Activity
                     description="Approvals, requests, etc."
                     // Link could go to a specific 'actions needed' page or individual modules
                 />
@@ -171,12 +172,12 @@ function SummaryCard({ title, value, icon, description, link, linkText }: Summar
             <CardContent style={{ transformStyle: 'preserve-3d' }}>
                 <div className="text-2xl font-bold transform transition-transform duration-300 group-hover:translate-z-2">{value}</div>
                 {description && <p className="text-xs text-muted-foreground transform transition-transform duration-300 group-hover:translate-z-4">{description}</p>}
-                {/* If the entire card is linked, don't render an inner link */}
-                {link && linkText && (
-                    <p className="text-xs text-accent hover:underline mt-2 block">
+                {/* If the entire card is linked, don't render an inner link - just text */}
+                 {link && linkText && (
+                    <p className="text-xs text-accent mt-2 block">
                         {linkText}
                     </p>
-                )}
+                 )}
             </CardContent>
         </Card>
     );
@@ -249,3 +250,4 @@ function AdminDashboardSkeleton() {
         </div>
     );
 }
+
