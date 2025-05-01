@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Corrected import - removed duplicate BellRing
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react"; // Corrected import
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser, logoutUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -55,7 +55,7 @@ const navItems: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
   { href: "/admin/logs", label: "Logs", icon: <FileText />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/broadcasts", label: "Broadcasts", icon: <Activity />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRing />, roles: ["admin"], isAdminSection: true }, // Use BellRing here
 ];
 
 export function AppSidebar() {
@@ -67,16 +67,17 @@ export function AppSidebar() {
   const [isLoggingOut, setIsLoggingOut] = React.useState(false); // State for logout operation
 
 
-   // Fetch user role on component mount
+   // Fetch user role on component mount and path change
    React.useEffect(() => {
      const fetchUserRole = async () => {
        setIsLoading(true);
        const user = await getCurrentUser(); // Fetch the current user
+       console.log("AppSidebar: Fetched user in useEffect:", user); // Debug log
        setCurrentUserRole(user?.role ?? null); // Set the role, default to null if no user
        setIsLoading(false);
      };
      fetchUserRole();
-   }, []);
+   }, [pathname]); // Re-run when the path changes
 
 
    // Filter items based on the current user's role
@@ -155,9 +156,9 @@ export function AppSidebar() {
              <Image
                 src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
-                width={120} // Increased width for horizontal logo
-                height={30} // Adjust height based on aspect ratio
-                className="h-8 w-auto flex-shrink-0" // Use h-8 (32px) and w-auto
+                width={150} // Increased width for horizontal logo
+                height={37} // Adjust height based on aspect ratio
+                className="h-9 w-auto flex-shrink-0" // Adjusted height
                 priority // Load logo quickly
              />
            <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap">CampusConnect</span>
@@ -179,7 +180,7 @@ export function AppSidebar() {
                      </SidebarMenuButton>
                 </SidebarMenuItem>
              ))
-           ) : (
+           ) : currentUserRole ? ( // Render items only if role is determined
              <>
                  {/* Render Dashboard Link First */}
                  {renderMenuItems(dashboardLinks)}
@@ -201,8 +202,7 @@ export function AppSidebar() {
                     </>
                 )}
              </>
-           )}
-           {!isLoading && !currentUserRole && (
+           ) : ( // Render "Login Required" if not loading and no role (logged out)
                 <SidebarMenuItem>
                     <SidebarMenuButton disabled asChild>
                         <Link href="/login" className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
