@@ -28,6 +28,23 @@ export async function authenticateUser(
     return { success: false, message: "Username and password are required." };
   }
 
+  // --- Add admin/admin check for testing ---
+  if (username.toLowerCase() === "admin" && password === "admin") {
+       console.log(`Authentication successful for test admin`);
+       const adminUser: AuthUser = {
+           id: "admin001",
+           name: "Test Admin",
+           email: "admin@campusconnect.edu", // Mock email
+           role: "admin",
+           department: "Administration",
+           isAuthenticated: true,
+           isLocked: false,
+       };
+       return { success: true, message: "Login successful!", user: adminUser };
+   }
+   // --- End admin/admin check ---
+
+
   const storedUser = mockCredentials[username.toLowerCase()]; // Case-insensitive username check
 
   if (storedUser && storedUser.password === password) {
