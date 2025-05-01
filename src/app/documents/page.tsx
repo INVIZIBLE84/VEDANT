@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, File, FileType, FileQuestion } from "lucide-react"; // Added File icons
+import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, FileType, FileSpreadsheet, FilePresentation, ImageIcon, FileArchive, FileQuestion } from "lucide-react"; // Import specific icons
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useToast } from "@/hooks/use-toast";
 import { AuthUser, getCurrentUser, UserRole } from "@/types/user";
 import { cn } from "@/lib/utils";
@@ -27,8 +28,12 @@ import {
 const FileIconMap: Record<FileIconType, React.ReactNode> = {
     pdf: <FileType className="text-red-500" />,
     word: <FileType className="text-blue-500" />,
+    excel: <FileSpreadsheet className="text-green-500" />,
+    powerpoint: <FilePresentation className="text-orange-500" />,
+    image: <ImageIcon className="text-purple-500" />,
+    zip: <FileArchive className="text-yellow-600" />,
     text: <FileType className="text-gray-500" />,
-    file: <File className="text-muted-foreground" />, // Default
+    file: <FileQuestion className="text-muted-foreground" />, // Default
 };
 
 
@@ -37,7 +42,7 @@ export default function DocumentsPage() {
     const [user, setUser] = React.useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [error, setError] = React.useState<string | null>(null);
-    const [activeTab, setActiveTab] = React.useState<string>("documents"); // 'documents', 'printRequests', 'auditLog'
+    const [activeTab, setActiveTab] = React.useState<string>("documents"); // 'documents', 'printRequests'
 
     // State for Documents Tab
     const [documents, setDocuments] = React.useState<Document[]>([]);
@@ -47,16 +52,17 @@ export default function DocumentsPage() {
 
     // State for Print Requests Tab
     const [printRequests, setPrintRequests] = React.useState<PrintRequest[]>([]);
-    const [printFilters, setPrintFilters] = React.useState<Partial<PrintRequest>>({});
+    const [printFilters, setPrintFilters] = React.useState<Partial<Pick<PrintRequest, 'status'>>>({}); // Simplified filters for now
     const [showPrintRequestDialog, setShowPrintRequestDialog] = React.useState(false);
     const [selectedDocForPrint, setSelectedDocForPrint] = React.useState<Document | null>(null);
     const [isRequestingPrint, setIsRequestingPrint] = React.useState(false);
-    const [isActioningPrint, setIsActioningPrint] = React.useState(false);
+    const [isActioningPrint, setIsActioningPrint] = React.useState<Record<string, boolean>>({}); // Loading state per request ID
 
      // State for Audit Log Viewer
      const [selectedDocForAudit, setSelectedDocForAudit] = React.useState<Document | null>(null);
      const [auditLog, setAuditLog] = React.useState<AuditLogEntry[]>([]);
      const [isLoadingAudit, setIsLoadingAudit] = React.useState(false);
+     const [showAuditDialog, setShowAuditDialog] = React.useState(false);
 
     // Fetch initial data based on user role
     React.useEffect(() => {
@@ -104,31 +110,30 @@ export default function DocumentsPage() {
 
     const fetchDocuments = async (filters: DocumentFilters, role?: UserRole) => {
          console.log("Fetching docs with filters:", filters);
-         setIsLoading(true); // Consider a separate loading state for table updates
+         // setIsLoading(true); // Avoid global loading flicker for filter changes
          try {
              const fetchedDocs = await getDocuments(filters, role);
              setDocuments(fetchedDocs);
          } catch (err) {
              console.error("Error fetching documents:", err);
-             setError("Failed to load documents.");
-             toast({ variant: "destructive", title: "Error", description: "Could not fetch documents." });
+             // Keep existing data but show error
+             toast({ variant: "destructive", title: "Filter Error", description: "Could not apply filters." });
          } finally {
-             setIsLoading(false);
+             // setIsLoading(false);
          }
      };
 
-    const fetchPrintRequests = async (filters: Partial<PrintRequest>, role: UserRole) => {
+    const fetchPrintRequests = async (filters: Partial<Pick<PrintRequest, 'status'>>, role: UserRole) => {
          console.log("Fetching print requests with filters:", filters);
-         setIsLoading(true); // Separate loading state?
+         // setIsLoading(true); // Avoid global loading flicker
          try {
              const fetchedRequests = await getPrintRequests(filters, role);
              setPrintRequests(fetchedRequests);
          } catch (err) {
              console.error("Error fetching print requests:", err);
-             setError("Failed to load print requests.");
-             toast({ variant: "destructive", title: "Error", description: "Could not fetch print requests." });
+              toast({ variant: "destructive", title: "Filter Error", description: "Could not fetch print requests." });
          } finally {
-             setIsLoading(false);
+             // setIsLoading(false);
          }
     };
 
@@ -152,7 +157,7 @@ export default function DocumentsPage() {
     };
 
     const handlePrintFilterChange = (key: keyof PrintRequest, value: string | undefined) => {
-        setPrintFilters(prev => ({ ...prev, [key]: value === 'all' || value === '' ? undefined : value }));
+        setPrintFilters(prev => ({ ...prev, [key]: value === 'all' || value === '' ? undefined : value } as Partial<Pick<PrintRequest, 'status'>>));
     };
 
     const handleFileUpload = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -182,6 +187,11 @@ export default function DocumentsPage() {
              toast({ variant: "destructive", title: "Error", description: "Please select a document type." });
              return;
         }
+        // Basic Max File Size Check (e.g., 20MB) - Backend should enforce this too
+         if (file.size > 20 * 1024 * 1024) {
+             toast({ variant: "destructive", title: "File Too Large", description: "Maximum upload size is 20MB." });
+             return;
+         }
 
 
         setIsUploading(true);
@@ -225,8 +235,8 @@ export default function DocumentsPage() {
                   setShowPrintRequestDialog(false);
                   setSelectedDocForPrint(null);
                   fetchPrintRequests(printFilters, user.role); // Refresh print request list
-                  // Optionally update document status locally or refetch documents
-                  setDocuments(prevDocs => prevDocs.map(doc => doc.id === selectedDocForPrint.id ? { ...doc, status: 'Pending Approval' } : doc)); // Optimistic update?
+                  // Optimistically update document status in the main list
+                  setDocuments(prevDocs => prevDocs.map(doc => doc.id === selectedDocForPrint.id ? { ...doc, status: 'Pending Approval' } : doc));
              }
          } catch (err) {
              console.error("Error requesting print:", err);
@@ -238,11 +248,11 @@ export default function DocumentsPage() {
 
     const handleActionPrint = async (requestId: string, action: 'Approve' | 'Reject') => {
          if (!user || user.role !== 'admin') return; // Ensure only admin can action
-         setIsActioningPrint(true); // Consider using a specific state per request ID if needed
+         setIsActioningPrint(prev => ({ ...prev, [requestId]: true }));
          // TODO: Add comments dialog for rejection
-         const comments = action === 'Reject' ? prompt("Enter reason for rejection:") : undefined;
+         const comments = action === 'Reject' ? prompt("Enter reason for rejection (optional but recommended):") : undefined;
           if (action === 'Reject' && comments === null) { // User cancelled prompt
-               setIsActioningPrint(false);
+               setIsActioningPrint(prev => ({ ...prev, [requestId]: false }));
                return;
            }
 
@@ -265,13 +275,13 @@ export default function DocumentsPage() {
              console.error(`Error ${action.toLowerCase()}ing print request:`, err);
              toast({ variant: "destructive", title: "Error", description: `Could not ${action.toLowerCase()} print request.` });
          } finally {
-            setIsActioningPrint(false);
+            setIsActioningPrint(prev => ({ ...prev, [requestId]: false }));
          }
     };
 
      const handleMarkPrinted = async (requestId: string) => {
          if (!user || user.role !== 'print_cell') return; // Ensure only print cell can mark
-         setIsActioningPrint(true);
+         setIsActioningPrint(prev => ({ ...prev, [requestId]: true }));
          try {
              const result = await markAsPrinted(requestId, { id: user.id, name: user.name });
              if (result.success) {
@@ -288,7 +298,7 @@ export default function DocumentsPage() {
               console.error("Error marking as printed:", err);
              toast({ variant: "destructive", title: "Error", description: "Could not mark as printed." });
          } finally {
-            setIsActioningPrint(false);
+            setIsActioningPrint(prev => ({ ...prev, [requestId]: false }));
          }
      };
 
@@ -298,7 +308,7 @@ export default function DocumentsPage() {
         const actionText = doc.isArchived ? "Unarchive" : "Archive";
         if (!confirm(`Are you sure you want to ${actionText.toLowerCase()} "${doc.name}"?`)) return;
 
-        setIsLoading(true); // Use general loading or specific state
+        // setIsLoading(true); // Use a more specific loading state if possible
         try {
             const result = await updateDocument(doc.id, { isArchived: !doc.isArchived }, { id: user.id, name: user.name, role: user.role });
             if (result.success) {
@@ -311,14 +321,14 @@ export default function DocumentsPage() {
              console.error(`Error ${actionText.toLowerCase()}ing document:`, err);
              toast({ variant: "destructive", title: "Error", description: `Could not ${actionText.toLowerCase()} document.` });
         } finally {
-            setIsLoading(false);
+            // setIsLoading(false);
         }
     };
 
      // --- Render Functions ---
 
     const renderFilters = () => (
-        <div className="flex flex-wrap gap-2 pt-4 pb-4 border-b">
+        <div className="flex flex-wrap items-center gap-2 pt-4 pb-4 border-b">
             <div className="relative flex-grow max-w-xs">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -342,6 +352,7 @@ export default function DocumentsPage() {
                     <SelectItem value="Application Form">Application Form</SelectItem>
                     <SelectItem value="Circular">Circular</SelectItem>
                     <SelectItem value="Letter">Letter</SelectItem>
+                     <SelectItem value="Schedule">Schedule</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
             </Select>
@@ -358,200 +369,254 @@ export default function DocumentsPage() {
                     <SelectItem value="Approved for Print">Approved for Print</SelectItem>
                     <SelectItem value="Printing">Printing</SelectItem>
                     <SelectItem value="Printed">Printed</SelectItem>
-                    {/* <SelectItem value="Archived">Archived</SelectItem> */}
+                    {/* <SelectItem value="Archived">Archived</SelectItem> */} {/* Handled by toggle */}
                      <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
             </Select>
-             {/* Archived Filter (Toggle Button?) */}
-             <Button variant={docFilters.isArchived ? "secondary" : "outline"} onClick={() => handleDocFilterChange('isArchived', !docFilters.isArchived)}>
-                 <Archive className="mr-2 h-4 w-4"/> {docFilters.isArchived ? "Showing Archived" : "Show Archived"}
-             </Button>
+             {/* Archived Filter Toggle (Admin Only) */}
+             { user?.role === 'admin' &&
+                <Button
+                    variant={docFilters.isArchived ? "secondary" : "outline"}
+                    onClick={() => handleDocFilterChange('isArchived', !docFilters.isArchived)}
+                    title={docFilters.isArchived ? "Showing Archived" : "Show Archived"}
+                >
+                    <Archive className="mr-2 h-4 w-4"/> {docFilters.isArchived ? "Archived" : "Active"}
+                </Button>
+             }
             <Button variant="outline" onClick={() => setDocFilters({ isArchived: false })}>Clear Filters</Button>
         </div>
     );
 
     const renderDocumentTable = () => (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead className="w-[50px]">Type</TableHead>
-                    <TableHead>Name & Info</TableHead>
-                    <TableHead className="hidden md:table-cell">Uploaded By</TableHead>
-                    <TableHead className="hidden lg:table-cell">Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {isLoading && !documents.length ? (
-                    <TableRow><TableCell colSpan={6} className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto my-4" /></TableCell></TableRow>
-                ) : documents.length > 0 ? (
-                    documents.map((doc) => {
-                        const statusStyle = getStatusBadgeVariant(doc.status);
-                        const iconType = getFileIconType(doc.fileMimeType);
-                        return (
-                            <TableRow key={doc.id}>
-                                <TableCell>{FileIconMap[iconType] || <FileQuestion />}</TableCell>
-                                <TableCell className="font-medium">
-                                    <span className="block">{doc.name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                         {doc.metadata.course} {doc.metadata.semester ? `(${doc.metadata.semester})` : ''} | {formatBytes(doc.fileSize)} | v{doc.version}
-                                    </span>
-                                     <span className="block text-xs text-muted-foreground">{doc.metadata.department}</span>
-                                </TableCell>
-                                <TableCell className="hidden md:table-cell text-muted-foreground">
-                                     {doc.uploadedBy.name} <span className="text-xs block">({doc.uploadedBy.role})</span>
-                                </TableCell>
-                                <TableCell className="hidden lg:table-cell text-muted-foreground">{format(new Date(doc.uploadDate), 'PP pp')}</TableCell>
-                                <TableCell>
-                                     <Badge variant={statusStyle.variant} className={cn("text-xs", statusStyle.className)}>{doc.status}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right space-x-1">
-                                     {/* Audit Log Button */}
-                                     <Dialog>
-                                         <DialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" title="View Audit Log" onClick={() => {setSelectedDocForAudit(doc); fetchAuditLogData(doc.id);}}>
-                                                 <History className="h-4 w-4" />
-                                             </Button>
-                                         </DialogTrigger>
-                                         <DialogContent className="max-w-2xl">
-                                             <DialogHeader>
-                                                 <DialogTitle>Audit Log: {selectedDocForAudit?.name}</DialogTitle>
-                                                 <DialogDescription>History of actions performed on this document.</DialogDescription>
-                                             </DialogHeader>
-                                             {isLoadingAudit ? <Loader2 className="h-6 w-6 animate-spin mx-auto my-4" /> :
-                                             <div className="max-h-[60vh] overflow-y-auto pr-4">
-                                                 {auditLog.length > 0 ? (
-                                                     <ul className="space-y-3">
-                                                         {auditLog.map((entry, index) => (
-                                                             <li key={index} className="text-sm border-b pb-2">
-                                                                 <span className="font-semibold">{entry.action}</span> by <span className="text-primary">{entry.userName}</span> ({entry.userId})
-                                                                 <span className="block text-xs text-muted-foreground">{format(new Date(entry.timestamp), 'PPpp')}</span>
-                                                                  {entry.details && <p className="text-xs text-muted-foreground mt-1">Details: {entry.details}</p>}
-                                                             </li>
-                                                         ))}
-                                                     </ul>
-                                                 ) : <p className="text-muted-foreground text-center py-4">No audit log entries found.</p>}
-                                             </div>
-                                             }
-                                         </DialogContent>
-                                     </Dialog>
+        <TooltipProvider>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-[50px] px-2 text-center">Type</TableHead>
+                        <TableHead>Name &amp; Info</TableHead>
+                        <TableHead className="hidden md:table-cell">Uploaded By</TableHead>
+                        <TableHead className="hidden lg:table-cell">Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading && !documents.length ? (
+                        <TableRow><TableCell colSpan={6} className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto my-4" /></TableCell></TableRow>
+                    ) : documents.length > 0 ? (
+                        documents.map((doc) => {
+                            const statusStyle = getStatusBadgeVariant(doc.status);
+                            const iconType = getFileIconType(doc.fileMimeType);
+                            const canRequestPrint = (user?.role === 'faculty' || user?.role === 'admin') && !doc.isArchived && !['Approved for Print', 'Printing', 'Archived'].includes(doc.status);
+                            const canDownload = (user?.role === 'admin' || user?.id === doc.uploadedBy.id || (user?.role === 'print_cell' && ['Approved for Print', 'Printing'].includes(doc.status)));
+                            const canArchive = user?.role === 'admin';
 
-                                     {/* Download Button (conditional) */}
-                                     { (user?.role === 'admin' || user?.id === doc.uploadedBy.id || user?.role === 'print_cell' && doc.status === 'Approved for Print') && // Simple permission check
-                                         <Button variant="ghost" size="icon" asChild title="Download">
-                                            <a href={doc.fileUrl} download={doc.name} target="_blank" rel="noopener noreferrer">
-                                                <Download className="h-4 w-4" />
-                                            </a>
-                                         </Button>
-                                     }
-                                      {/* Print Request Button (conditional) */}
-                                      { (user?.role === 'faculty' || user?.role === 'admin') && !doc.isArchived && ['Uploaded', 'Pending Approval', 'Rejected', 'Printed'].includes(doc.status) && // Only allow if not already requested/printing
-                                          <Dialog open={showPrintRequestDialog && selectedDocForPrint?.id === doc.id} onOpenChange={(open) => { if(!open) setSelectedDocForPrint(null); setShowPrintRequestDialog(open); }}>
-                                              <DialogTrigger asChild>
-                                                  <Button variant="ghost" size="icon" title="Request Print" onClick={() => setSelectedDocForPrint(doc)}>
-                                                      <Printer className="h-4 w-4" />
-                                                  </Button>
-                                              </DialogTrigger>
-                                              <DialogContent>
-                                                  <DialogHeader>
-                                                      <DialogTitle>Request Print for: {selectedDocForPrint?.name}</DialogTitle>
-                                                      <DialogDescription>Specify print details.</DialogDescription>
-                                                  </DialogHeader>
-                                                  <form onSubmit={handleRequestPrintSubmit} className="space-y-4">
-                                                       <div><Label htmlFor="copies">Number of Copies</Label><Input id="copies" name="copies" type="number" required min="1" /></div>
-                                                       <div><Label htmlFor="paperSize">Paper Size</Label>
-                                                          <Select name="paperSize" defaultValue="A4">
-                                                               <SelectTrigger><SelectValue /></SelectTrigger>
-                                                               <SelectContent><SelectItem value="A4">A4</SelectItem><SelectItem value="Letter">Letter</SelectItem></SelectContent>
-                                                           </Select>
-                                                       </div>
-                                                       <div><Label htmlFor="deadline">Deadline (Optional)</Label><Input id="deadline" name="deadline" type="date" /></div>
-                                                       <DialogFooter>
-                                                          <Button type="button" variant="ghost" onClick={() => {setShowPrintRequestDialog(false); setSelectedDocForPrint(null);}}>Cancel</Button>
-                                                          <Button type="submit" disabled={isRequestingPrint}>
-                                                              {isRequestingPrint ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} Submit Request
-                                                          </Button>
-                                                       </DialogFooter>
-                                                  </form>
-                                              </DialogContent>
-                                          </Dialog>
-                                      }
-                                      {/* Archive/Unarchive Button (Admin only) */}
-                                       { user?.role === 'admin' &&
-                                            <Button variant="ghost" size="icon" title={doc.isArchived ? "Unarchive" : "Archive"} onClick={() => handleArchiveToggle(doc)}>
-                                                <Archive className={`h-4 w-4 ${doc.isArchived ? 'text-accent' : ''}`} />
-                                            </Button>
-                                       }
-                                       {/* TODO: Add Edit/Delete Buttons with permissions */}
-                                </TableCell>
-                            </TableRow>
-                        )
-                    })
-                ) : (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No documents found matching filters.</TableCell></TableRow>
-                )}
-            </TableBody>
-        </Table>
+                            return (
+                                <TableRow key={doc.id}>
+                                    <TableCell className="px-2 text-center">
+                                         <Tooltip>
+                                             <TooltipTrigger>{FileIconMap[iconType] || <FileQuestion />}</TooltipTrigger>
+                                             <TooltipContent>{doc.type}</TooltipContent>
+                                         </Tooltip>
+                                    </TableCell>
+                                    <TableCell className="font-medium align-top">
+                                        <span className="block">{doc.name}</span>
+                                        <span className="text-xs text-muted-foreground block">
+                                            {doc.metadata.course}{doc.metadata.semester ? ` (${doc.metadata.semester})` : ''} | {formatBytes(doc.fileSize)} | v{doc.version}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground block">{doc.metadata.department}</span>
+                                        {doc.metadata.tags && doc.metadata.tags.length > 0 && (
+                                            <div className="mt-1 space-x-1">
+                                                 {doc.metadata.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>)}
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="hidden md:table-cell text-muted-foreground align-top">
+                                        {doc.uploadedBy.name} <span className="text-xs block">({doc.uploadedBy.role})</span>
+                                    </TableCell>
+                                    <TableCell className="hidden lg:table-cell text-muted-foreground align-top">{format(new Date(doc.uploadDate), 'PP pp')}</TableCell>
+                                    <TableCell className="align-top">
+                                        <Badge variant={statusStyle.variant} className={cn("text-xs whitespace-nowrap", statusStyle.className)}>{doc.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-0.5 align-top">
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                 {/* Audit Log Button */}
+                                                 <Dialog open={showAuditDialog && selectedDocForAudit?.id === doc.id} onOpenChange={open => {if (!open) setSelectedDocForAudit(null); setShowAuditDialog(open);}}>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" onClick={() => {setSelectedDocForAudit(doc); fetchAuditLogData(doc.id);}}>
+                                                            <History className="h-4 w-4" />
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent className="max-w-2xl">
+                                                        <DialogHeader>
+                                                            <DialogTitle>Audit Log: {selectedDocForAudit?.name}</DialogTitle>
+                                                            <DialogDescription>History of actions performed on this document.</DialogDescription>
+                                                        </DialogHeader>
+                                                        {isLoadingAudit ? <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin" /></div> :
+                                                            <div className="max-h-[60vh] overflow-y-auto pr-4 mt-4 border-t pt-4">
+                                                                {auditLog.length > 0 ? (
+                                                                    <ul className="space-y-4">
+                                                                        {auditLog.map((entry, index) => (
+                                                                            <li key={index} className="text-sm border-b pb-2 last:border-b-0">
+                                                                                <p><span className="font-semibold">{entry.action}</span> by <span className="text-primary">{entry.userName}</span></p>
+                                                                                <p className="text-xs text-muted-foreground">{format(new Date(entry.timestamp), 'PPpp')}</p>
+                                                                                {entry.details && <p className="text-xs text-muted-foreground mt-1">Details: {entry.details}</p>}
+                                                                            </li>
+                                                                        ))}
+                                                                    </ul>
+                                                                ) : <p className="text-muted-foreground text-center py-4">No audit log entries found.</p>}
+                                                            </div>
+                                                        }
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </TooltipTrigger>
+                                            <TooltipContent>View Audit Log</TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                {/* Download Button (conditional) */}
+                                                <Button variant="ghost" size="icon" asChild disabled={!canDownload}>
+                                                    <a href={canDownload ? doc.fileUrl : undefined} download={doc.name} target="_blank" rel="noopener noreferrer" aria-disabled={!canDownload}>
+                                                        <Download className="h-4 w-4" />
+                                                    </a>
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{canDownload ? "Download" : "Download restricted"}</TooltipContent>
+                                        </Tooltip>
+
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                {/* Print Request Button (conditional) */}
+                                                <Dialog open={showPrintRequestDialog && selectedDocForPrint?.id === doc.id} onOpenChange={(open) => { if(!open) setSelectedDocForPrint(null); setShowPrintRequestDialog(open); }}>
+                                                    <DialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" disabled={!canRequestPrint} onClick={() => setSelectedDocForPrint(doc)}>
+                                                            <Printer className="h-4 w-4" />
+                                                        </Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle>Request Print: {selectedDocForPrint?.name}</DialogTitle>
+                                                            <DialogDescription>Specify print details for "{selectedDocForPrint?.type}"</DialogDescription>
+                                                        </DialogHeader>
+                                                        <form onSubmit={handleRequestPrintSubmit} className="space-y-4 pt-4">
+                                                            <div><Label htmlFor="copies">Number of Copies</Label><Input id="copies" name="copies" type="number" required min="1" defaultValue="1" /></div>
+                                                            <div><Label htmlFor="paperSize">Paper Size</Label>
+                                                                <Select name="paperSize" defaultValue="A4">
+                                                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                                                    <SelectContent><SelectItem value="A4">A4</SelectItem><SelectItem value="Letter">Letter</SelectItem></SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div><Label htmlFor="deadline">Deadline (Optional)</Label><Input id="deadline" name="deadline" type="date" /></div>
+                                                            <DialogFooter>
+                                                                <Button type="button" variant="ghost" onClick={() => {setShowPrintRequestDialog(false); setSelectedDocForPrint(null);}}>Cancel</Button>
+                                                                <Button type="submit" disabled={isRequestingPrint}>
+                                                                    {isRequestingPrint ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} Submit Request
+                                                                </Button>
+                                                            </DialogFooter>
+                                                        </form>
+                                                    </DialogContent>
+                                                </Dialog>
+                                            </TooltipTrigger>
+                                            <TooltipContent>{canRequestPrint ? "Request Print" : `Cannot request print (Status: ${doc.status})`}</TooltipContent>
+                                        </Tooltip>
+
+                                         <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                 {/* Archive/Unarchive Button (Admin only) */}
+                                                <Button variant="ghost" size="icon" disabled={!canArchive} onClick={() => handleArchiveToggle(doc)}>
+                                                    <Archive className={cn("h-4 w-4", doc.isArchived && 'text-accent')} />
+                                                </Button>
+                                            </TooltipTrigger>
+                                             <TooltipContent>{canArchive ? (doc.isArchived ? "Unarchive" : "Archive") : "Archive restricted"}</TooltipContent>
+                                        </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
+                    ) : (
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No documents found matching filters.</TableCell></TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </TooltipProvider>
     );
 
      const renderPrintRequestTable = () => (
-        <Table>
-             <TableHeader>
-                 <TableRow>
-                     <TableHead>Document Name</TableHead>
-                     <TableHead>Requested By</TableHead>
-                     <TableHead className="hidden md:table-cell">Date</TableHead>
-                     <TableHead>Details</TableHead>
-                     <TableHead>Status</TableHead>
-                     <TableHead className="text-right">Actions</TableHead>
-                 </TableRow>
-             </TableHeader>
-             <TableBody>
-                 {isLoading && !printRequests.length ? (
-                    <TableRow><TableCell colSpan={6} className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto my-4" /></TableCell></TableRow>
-                 ): printRequests.length > 0 ? (
-                     printRequests.map((req) => {
-                         const statusStyle = getStatusBadgeVariant(req.status);
-                         return (
-                             <TableRow key={req.id}>
-                                <TableCell className="font-medium">{req.documentName}</TableCell>
-                                <TableCell className="text-muted-foreground">{req.requestedBy.name}</TableCell>
-                                <TableCell className="hidden md:table-cell text-muted-foreground">{format(new Date(req.requestDate), 'PP p')}</TableCell>
-                                 <TableCell className="text-xs text-muted-foreground">
-                                     Copies: {req.copies} <br/> Size: {req.paperSize}
-                                     {req.deadline && <span className="block">Deadline: {format(new Date(req.deadline), 'PP')}</span>}
-                                 </TableCell>
-                                <TableCell>
-                                     <Badge variant={statusStyle.variant} className={cn("text-xs", statusStyle.className)}>{req.status}</Badge>
-                                     {req.status === 'Rejected' && req.comments && <Info className="inline-block ml-1 h-3 w-3 text-muted-foreground cursor-help" title={`Reason: ${req.comments}`} />}
-                                 </TableCell>
-                                <TableCell className="text-right space-x-1">
-                                     {/* Admin Actions */}
-                                     { user?.role === 'admin' && req.status === 'Pending' && (
-                                        <>
-                                             <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleActionPrint(req.id, 'Approve')} disabled={isActioningPrint}><Check className="h-4 w-4 mr-1"/>Approve</Button>
-                                             <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleActionPrint(req.id, 'Reject')} disabled={isActioningPrint}><X className="h-4 w-4 mr-1"/>Reject</Button>
-                                        </>
-                                     )}
-                                     {/* Print Cell Action */}
-                                     { user?.role === 'print_cell' && req.status === 'Approved' && (
-                                          <Button size="sm" variant="default" onClick={() => handleMarkPrinted(req.id)} disabled={isActioningPrint}><Printer className="h-4 w-4 mr-1"/>Mark Printed</Button>
-                                     )}
-                                      {/* View Document Link (if permitted) */}
-                                     <Button variant="ghost" size="sm" asChild>
-                                          {/* TODO: Link to a secure viewer page, passing docId */}
-                                           <span className="cursor-pointer" onClick={() => alert(`Viewing document: ${req.documentName}`)}>View Doc</span>
-                                     </Button>
-                                </TableCell>
-                             </TableRow>
-                         )
-                     })
-                 ) : (
-                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No print requests found.</TableCell></TableRow>
-                 )}
-             </TableBody>
-        </Table>
+         <TooltipProvider>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Document Name</TableHead>
+                        <TableHead>Requested By</TableHead>
+                        <TableHead className="hidden md:table-cell">Date</TableHead>
+                        <TableHead>Details</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading && !printRequests.length ? (
+                        <TableRow><TableCell colSpan={6} className="text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto my-4" /></TableCell></TableRow>
+                    ): printRequests.length > 0 ? (
+                        printRequests.map((req) => {
+                            const statusStyle = getStatusBadgeVariant(req.status);
+                            const isLoadingAction = isActioningPrint[req.id];
+                            return (
+                                <TableRow key={req.id}>
+                                    <TableCell className="font-medium align-top">{req.documentName}</TableCell>
+                                    <TableCell className="text-muted-foreground align-top">{req.requestedBy.name}</TableCell>
+                                    <TableCell className="hidden md:table-cell text-muted-foreground align-top">{format(new Date(req.requestDate), 'PP p')}</TableCell>
+                                    <TableCell className="text-xs text-muted-foreground align-top">
+                                        Copies: {req.copies} <br/> Size: {req.paperSize}
+                                        {req.deadline && <span className="block">Deadline: {format(new Date(req.deadline), 'PP')}</span>}
+                                    </TableCell>
+                                    <TableCell className="align-top">
+                                        <Badge variant={statusStyle.variant} className={cn("text-xs whitespace-nowrap", statusStyle.className)}>{req.status}</Badge>
+                                        {req.comments &&
+                                            <Tooltip>
+                                                <TooltipTrigger asChild><Info className="inline-block ml-1 h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger>
+                                                <TooltipContent side="top">{req.status === 'Rejected' ? 'Rejection Reason' : 'Comment'}: {req.comments}</TooltipContent>
+                                            </Tooltip>
+                                        }
+                                    </TableCell>
+                                    <TableCell className="text-right space-x-1 align-top">
+                                        {/* Admin Actions */}
+                                        { user?.role === 'admin' && req.status === 'Pending' && (
+                                            <>
+                                                <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleActionPrint(req.id, 'Approve')} disabled={isLoadingAction}>
+                                                    {isLoadingAction ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4"/>}<span className="ml-1 hidden sm:inline">Approve</span>
+                                                </Button>
+                                                <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleActionPrint(req.id, 'Reject')} disabled={isLoadingAction}>
+                                                    {isLoadingAction ? <Loader2 className="h-4 w-4 animate-spin"/> : <X className="h-4 w-4"/>}<span className="ml-1 hidden sm:inline">Reject</span>
+                                                </Button>
+                                            </>
+                                        )}
+                                        {/* Print Cell Action */}
+                                        { user?.role === 'print_cell' && (req.status === 'Approved' || req.status === 'Printing') && (
+                                            <Button size="sm" variant="default" onClick={() => handleMarkPrinted(req.id)} disabled={isLoadingAction}>
+                                                {isLoadingAction ? <Loader2 className="h-4 w-4 animate-spin"/> : <Printer className="h-4 w-4"/>}<span className="ml-1 hidden sm:inline">Mark Printed</span>
+                                            </Button>
+                                        )}
+                                        {/* View Document Link (if permitted) */}
+                                         {/* TODO: Implement secure view link */}
+                                         <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button variant="ghost" size="sm" onClick={() => alert(`Viewing document: ${req.documentName}`)}>View</Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>View Document</TooltipContent>
+                                         </Tooltip>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
+                    ) : (
+                        <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">No print requests found.</TableCell></TableRow>
+                    )}
+                </TableBody>
+            </Table>
+         </TooltipProvider>
      );
 
     // --- Main Return ---
@@ -568,6 +633,9 @@ export default function DocumentsPage() {
         );
     }
 
+    const canUpload = user?.role === 'faculty' || user?.role === 'admin';
+    const canViewPrintRequests = user?.role === 'admin' || user?.role === 'faculty' || user?.role === 'print_cell';
+
     return (
         <div className="space-y-6">
              <div className="flex items-center justify-between">
@@ -575,7 +643,7 @@ export default function DocumentsPage() {
                     <FileText className="h-7 w-7" /> Document Workflow <span className="text-sm font-normal text-muted-foreground">({user?.role})</span>
                 </h1>
                  {/* Upload Button - Visible to Faculty/Admin */}
-                 { (user?.role === 'faculty' || user?.role === 'admin') &&
+                 { canUpload &&
                      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                          <DialogTrigger asChild>
                              <Button className="bg-accent hover:bg-accent/90 text-accent-foreground">
@@ -585,12 +653,12 @@ export default function DocumentsPage() {
                          <DialogContent className="max-w-lg">
                              <DialogHeader>
                                  <DialogTitle>Upload New Document</DialogTitle>
-                                 <DialogDescription>Select file and provide details.</DialogDescription>
+                                 <DialogDescription>Select file and provide details. Max 20MB.</DialogDescription>
                              </DialogHeader>
                              {/* Upload Form */}
                              <form onSubmit={handleFileUpload} className="space-y-4 pt-4">
-                                 <div><Label htmlFor="documentFile">File</Label><Input id="documentFile" name="documentFile" type="file" required /></div>
-                                 <div><Label htmlFor="documentType">Document Type</Label>
+                                 <div><Label htmlFor="documentFile">File *</Label><Input id="documentFile" name="documentFile" type="file" required accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.zip" /></div>
+                                 <div><Label htmlFor="documentType">Document Type *</Label>
                                     <Select name="documentType" required>
                                         <SelectTrigger><SelectValue placeholder="Select type..." /></SelectTrigger>
                                         <SelectContent>
@@ -599,6 +667,7 @@ export default function DocumentsPage() {
                                              <SelectItem value="Application Form">Application Form</SelectItem>
                                              <SelectItem value="Circular">Circular</SelectItem>
                                               <SelectItem value="Letter">Letter</SelectItem>
+                                               <SelectItem value="Schedule">Schedule</SelectItem>
                                              <SelectItem value="Other">Other</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -646,12 +715,18 @@ export default function DocumentsPage() {
              )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="documents">
-                 <TabsList className="grid w-full grid-cols-2 md:w-fit md:grid-cols-[auto,auto,auto]">
-                    <TabsTrigger value="documents">Documents ({documents.filter(d => !d.isArchived).length})</TabsTrigger>
-                     { (user?.role === 'admin' || user?.role === 'faculty' || user?.role === 'print_cell') &&
-                         <TabsTrigger value="printRequests">Print Requests ({printRequests.length})</TabsTrigger>
+                 <TabsList className={cn(
+                      "grid w-full grid-cols-1", // Default: 1 column for mobile
+                      canViewPrintRequests ? "sm:grid-cols-2 sm:w-fit" : "sm:w-auto" // Adjust grid cols based on whether print tab is visible
+                      )}>
+                    <TabsTrigger value="documents">
+                         <FileText className="mr-1 h-4 w-4"/> Documents ({documents.length})
+                    </TabsTrigger>
+                     { canViewPrintRequests &&
+                         <TabsTrigger value="printRequests">
+                             <Printer className="mr-1 h-4 w-4"/> Print Requests ({printRequests.length})
+                         </TabsTrigger>
                      }
-                     {/* <TabsTrigger value="auditLog" disabled>Audit Log</TabsTrigger> */}
                  </TabsList>
 
                  {/* Documents Tab */}
@@ -659,23 +734,22 @@ export default function DocumentsPage() {
                      <Card>
                         <CardHeader>
                             <CardTitle>Document Library</CardTitle>
-                            <CardDescription>Manage and access uploaded documents.</CardDescription>
+                            <CardDescription>Manage and access uploaded documents based on your role.</CardDescription>
                             {renderFilters()}
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-0 sm:px-6"> {/* Remove horizontal padding on mobile for table */}
                             {renderDocumentTable()}
                         </CardContent>
                      </Card>
                  </TabsContent>
 
                  {/* Print Requests Tab */}
-                 {(user?.role === 'admin' || user?.role === 'faculty' || user?.role === 'print_cell') &&
+                 {canViewPrintRequests &&
                      <TabsContent value="printRequests">
                          <Card>
                              <CardHeader>
                                 <CardTitle>Print Requests</CardTitle>
                                 <CardDescription>Track the status of document print requests.</CardDescription>
-                                 {/* Add Print Request Filters Here if needed */}
                                   <div className="flex flex-wrap gap-2 pt-4 pb-4 border-b">
                                       <Select value={printFilters.status} onValueChange={(value) => handlePrintFilterChange('status', value)}>
                                           <SelectTrigger className="w-full sm:w-[180px]">
@@ -694,7 +768,7 @@ export default function DocumentsPage() {
                                       <Button variant="outline" onClick={() => setPrintFilters({})}>Clear Filters</Button>
                                   </div>
                              </CardHeader>
-                             <CardContent>
+                             <CardContent className="px-0 sm:px-6">
                                  {renderPrintRequestTable()}
                              </CardContent>
                          </Card>
@@ -705,3 +779,4 @@ export default function DocumentsPage() {
         </div>
     );
 }
+

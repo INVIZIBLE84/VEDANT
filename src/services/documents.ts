@@ -1,10 +1,11 @@
 import type { UserRole } from "@/types/user";
 import { format } from 'date-fns';
+import { FileType, FileSpreadsheet, FilePresentation, Image as ImageIcon, FileArchive, FileQuestion } from 'lucide-react'; // Import specific icons
 
 /**
  * Types of documents managed by the system.
  */
-export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Other';
+export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Schedule' | 'Other'; // Added 'Schedule'
 
 /**
  * Status of a document within the system.
@@ -89,7 +90,7 @@ export interface AuditLogEntry {
 /**
  * Type for the string identifier returned by getFileIconType.
  */
-export type FileIconType = 'pdf' | 'word' | 'text' | 'file';
+export type FileIconType = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'zip' | 'text' | 'file'; // Added new types
 
 
 // --- Mock Data (In-memory placeholder) ---
@@ -125,6 +126,24 @@ let sampleDocuments: Document[] = [
         metadata: { department: 'Computer Science', subjectName: 'Intro to CS', course: 'CS101', semester: 'Spring 2024', paperType: 'Midterm' },
         status: 'Archived', fileUrl: '/mock/CS101_Midterm_Spring24.pdf', fileSize: 140 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: true,
     },
+    {
+        id: 'doc-schedule-cs', name: 'CS_Dept_Fall24_Timetable.xlsx', type: 'Schedule',
+        uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-07-29T14:00:00Z',
+        metadata: { department: 'Computer Science', semester: 'Fall 2024', tags: ['timetable', 'schedule'] },
+        status: 'Uploaded', fileUrl: '/mock/CS_Dept_Fall24_Timetable.xlsx', fileSize: 45 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 1, isArchived: false,
+    },
+    {
+        id: 'doc-logo', name: 'CampusConnect_Logo.png', type: 'Other',
+        uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-01T09:00:00Z',
+        metadata: { department: 'Administration', tags: ['branding', 'logo'] },
+        status: 'Uploaded', fileUrl: '/mock/CampusConnect_Logo.png', fileSize: 120 * 1024, fileMimeType: 'image/png', version: 1, isArchived: false,
+    },
+     {
+        id: 'doc-project-archive', name: 'FinalYearProjects_2023.zip', type: 'Other',
+        uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-06-15T16:00:00Z',
+        metadata: { department: 'Computer Science', semester: 'Spring 2024', tags: ['projects', 'archive'] },
+        status: 'Uploaded', fileUrl: '/mock/FinalYearProjects_2023.zip', fileSize: 15 * 1024 * 1024, fileMimeType: 'application/zip', version: 1, isArchived: false,
+    },
 ];
 
 let samplePrintRequests: PrintRequest[] = [
@@ -135,7 +154,11 @@ let samplePrintRequests: PrintRequest[] = [
         approvedBy: { id: 'admin001', name: 'Admin User' }, approvalDate: '2024-05-11T15:00:00Z',
         printedBy: { id: 'printcell007', name: 'Print Operator' }, printedDate: '2024-05-15T11:00:00Z', comments: 'Printed successfully.'
     },
-    // Add more requests as needed
+    {
+        id: 'pr-2', documentId: 'doc-exam-cs101-mid', documentName: 'CS101_Midterm_Fall24.pdf',
+        requestedBy: { id: 'faculty999', name: 'Dr. Turing' }, requestDate: '2024-07-21T09:00:00Z',
+        status: 'Pending', copies: 60, paperSize: 'A4', deadline: '2024-08-10',
+    },
 ];
 
 let sampleAuditLogs: { [documentId: string]: AuditLogEntry[] } = {
@@ -149,6 +172,11 @@ let sampleAuditLogs: { [documentId: string]: AuditLogEntry[] } = {
     ],
     'doc-exam-cs101-mid': [
          { timestamp: '2024-07-20T10:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
+         { timestamp: '2024-07-21T09:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Print Requested', details: '60 copies, A4' },
+    ],
+    'doc-schedule-cs': [
+        { timestamp: '2024-07-29T14:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
+        { timestamp: '2024-07-30T10:00:00Z', userId: 'student123', userName: 'Alice Smith', action: 'Viewed' },
     ],
 };
 
@@ -214,26 +242,38 @@ export async function getDocuments(filters?: DocumentFilters, userRole?: UserRol
     let results = sampleDocuments;
 
     // --- Permission Simulation (Basic) ---
-    // Students typically only see Notices/Circulars unless specifically shared?
     if (userRole === 'student') {
-         results = results.filter(doc => ['Notice', 'Circular', 'Application Form'].includes(doc.type) && !doc.isArchived);
-         // TODO: Add logic for documents shared specifically with students/courses
+         // Students can see Notices, Circulars, Schedules, Application Forms, and 'Other' non-sensitive types.
+         const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Application Form', 'Other'];
+         results = results.filter(doc => allowedTypes.includes(doc.type) && !doc.isArchived);
+         // Students cannot see Exam Papers or Letters unless explicitly shared (not implemented here)
+         results = results.filter(doc => doc.type !== 'Exam Paper' && doc.type !== 'Letter');
+         // Example: Exclude internal branding files from students
+         results = results.filter(doc => !(doc.type === 'Other' && doc.metadata.tags?.includes('branding')));
     }
-    // Faculty see their uploads + department docs + general notices
     else if (userRole === 'faculty') {
-        // Simplified: show non-archived. Real app needs user ID check.
-        results = results.filter(doc => !doc.isArchived);
+        // Faculty see their uploads, department docs, general notices, schedules, letters. Filter out archived unless requested.
+        const isArchivedFilter = filters?.isArchived === undefined ? false : filters.isArchived;
+        results = results.filter(doc => doc.isArchived === isArchivedFilter);
+        // Further refine based on faculty's department vs doc department if needed
     }
-     // Print cell only sees 'Approved for Print' or 'Printing'
      else if (userRole === 'print_cell') {
+         // Print cell only sees 'Approved for Print' or 'Printing' requests.
          results = results.filter(doc => ['Approved for Print', 'Printing'].includes(doc.status) && !doc.isArchived);
      }
-    // Admin sees everything by default (can be filtered)
+    // Admin sees everything by default (filtering applies below)
+
 
     // --- Filtering ---
-     results = results.filter(doc => filters?.isArchived === undefined ? !doc.isArchived : doc.isArchived === filters.isArchived);
+    // Apply archive filter first if admin didn't specifically request archived
+     if (userRole !== 'admin' || filters?.isArchived === undefined) {
+        results = results.filter(doc => !doc.isArchived);
+     } else if (filters?.isArchived !== undefined) {
+          results = results.filter(doc => doc.isArchived === filters.isArchived);
+     }
 
-    if (filters?.type) {
+
+    if (filters?.type && filters.type !== 'all' as any) { // Check against 'all' string
         results = results.filter(doc => doc.type === filters.type);
     }
     if (filters?.department) {
@@ -242,7 +282,7 @@ export async function getDocuments(filters?: DocumentFilters, userRole?: UserRol
     if (filters?.semester) {
         results = results.filter(doc => doc.metadata.semester === filters.semester);
     }
-    if (filters?.status) {
+    if (filters?.status && filters.status !== 'all' as any) { // Check against 'all' string
         results = results.filter(doc => doc.status === filters.status);
     }
      if (filters?.uploaderId) {
@@ -280,9 +320,16 @@ export async function getDocumentById(documentId: string, userId: string, userRo
     if (!document) return null;
 
     // Basic permission simulation
-     if (userRole === 'student' && !['Notice', 'Circular', 'Application Form'].includes(document.type)) {
-         console.warn(`Access denied for student ${userId} to view document ${documentId}`);
-         return null; // Students can only see general docs by default
+     if (userRole === 'student') {
+        const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Application Form', 'Other'];
+         if (!allowedTypes.includes(document.type) || document.isArchived) {
+              console.warn(`Access denied for student ${userId} to view document ${documentId}`);
+              return null;
+         }
+          if (document.type === 'Other' && document.metadata.tags?.includes('branding')) {
+              console.warn(`Access denied for student ${userId} to view internal document ${documentId}`);
+              return null;
+          }
      }
      if (userRole === 'print_cell' && !['Approved for Print', 'Printing'].includes(document.status)) {
           console.warn(`Access denied for print_cell ${userId} to view document ${documentId} with status ${document.status}`);
@@ -368,10 +415,12 @@ export async function requestPrint(
 
     const document = sampleDocuments.find(d => d.id === documentId);
     if (!document) return { error: "Document not found." };
-    if (document.status !== 'Uploaded' && document.status !== 'Pending Approval') { // Allow requesting print even if pending doc approval? Business logic needed.
-       // return { error: `Cannot request print for document with status: ${document.status}` };
+    // Allow requesting print for Uploaded, Pending Approval, Rejected, or Printed docs (to re-request)
+    if (['Approved for Print', 'Printing', 'Archived'].includes(document.status)) {
+        return { error: `Cannot request print for document with status: ${document.status}` };
     }
-     if (samplePrintRequests.some(pr => pr.documentId === documentId && pr.status !== 'Printed' && pr.status !== 'Rejected')) {
+     if (samplePrintRequests.some(pr => pr.documentId === documentId && ['Pending', 'Approved', 'Printing'].includes(pr.status))) {
+         // Allow re-requesting if previously rejected or printed.
         return { error: "A print request for this document is already in progress." };
      }
 
@@ -382,15 +431,18 @@ export async function requestPrint(
         documentName: document.name,
         requestedBy: requester,
         requestDate: new Date().toISOString(),
-        status: 'Pending',
+        status: 'Pending', // Always starts as Pending
         copies: copies,
         paperSize: paperSize,
         deadline: deadline,
     };
 
     samplePrintRequests.push(newPrintRequest);
-    // Update document status if needed? Maybe not here, wait for admin approval.
-     // document.status = 'Pending Approval'; // Or similar?
+    // Update document status to 'Pending Approval' when print is requested
+    if (document.status !== 'Pending Approval') {
+        document.status = 'Pending Approval';
+        logAudit(documentId, requester.id, requester.name, 'Status Changed', `New status: Pending Approval due to Print Request`);
+    }
      logAudit(documentId, requester.id, requester.name, 'Print Requested', `${copies} copies, ${paperSize}`);
 
 
@@ -412,22 +464,20 @@ export async function getPrintRequests(filters?: Partial<PrintRequest>, userRole
 
      // --- Permission Simulation ---
      if (userRole === 'faculty') {
-        // Faculty sees their requests
-        // Simplified: assumes filters.requestedBy.id is set if filtering by faculty
-        if (filters?.requestedBy?.id) {
-             results = results.filter(pr => pr.requestedBy.id === filters.requestedBy?.id);
-        } else {
-             // If no specific requester filter, maybe show none? Or based on department? Needs clarity.
-             // results = []; // Or fetch based on department
-        }
+        // Faculty sees only their requests
+         const currentUserId = (await getCurrentUser())?.id; // Assume getCurrentUser exists
+         results = results.filter(pr => pr.requestedBy.id === currentUserId);
      } else if (userRole === 'print_cell') {
          // Print cell sees 'Approved' or 'Printed' requests
          results = results.filter(pr => ['Approved', 'Printed'].includes(pr.status));
+     } else if (userRole === 'student') {
+        // Students shouldn't see print requests
+        results = [];
      }
-     // Admin sees all by default
+     // Admin sees all by default (filtering applies below)
 
     // --- Filtering ---
-    if (filters?.status) {
+    if (filters?.status && filters.status !== 'all' as any) {
         results = results.filter(pr => pr.status === filters.status);
     }
     if (filters?.documentId) {
@@ -482,7 +532,8 @@ export async function actionPrintRequest(
          sampleDocuments[docIndex].status = 'Rejected'; // Update document status
          logAudit(printRequest.documentId, admin.id, admin.name, 'Rejected Print', comments);
      }
-     printRequest.comments = comments;
+     // Removed duplicate assignment
+     // printRequest.comments = comments;
 
 
      return { success: true, message: `Print request ${action.toLowerCase()}d.` };
@@ -503,7 +554,8 @@ export async function markAsPrinted(requestId: string, printer: { id: string; na
      if (reqIndex === -1) return { success: false, message: "Print request not found." };
 
      const printRequest = samplePrintRequests[reqIndex];
-     if (printRequest.status !== 'Approved') { // Can only mark approved requests as printed
+     // Allow marking 'Approved' or 'Printing' as printed (in case they started printing before marking)
+     if (printRequest.status !== 'Approved' && printRequest.status !== 'Printing') {
          return { success: false, message: `Cannot mark request with status ${printRequest.status} as printed.` };
      }
 
@@ -534,12 +586,13 @@ export async function getAuditLog(documentId: string, userRole: UserRole): Promi
      // TODO: Implement API call with permission checks (e.g., only admin/uploader?)
      await new Promise(resolve => setTimeout(resolve, 50));
 
-     if (userRole !== 'admin' && userRole !== 'faculty') { // Simplified permission
+     // Allow admin and faculty to view logs
+     if (userRole !== 'admin' && userRole !== 'faculty') {
          console.warn(`Audit log access denied for role ${userRole}`);
          return [];
      }
 
-     return sampleAuditLogs[documentId] || [];
+     return sampleAuditLogs[documentId]?.sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()) || []; // Return sorted or empty array
 }
 
 /** Helper to add entry to mock audit log */
@@ -547,38 +600,58 @@ function logAudit(documentId: string, userId: string, userName: string, action: 
     if (!sampleAuditLogs[documentId]) {
         sampleAuditLogs[documentId] = [];
     }
-    sampleAuditLogs[documentId].push({
+    // Avoid logging repetitive 'Viewed' actions close together (simple debounce simulation)
+    const lastLog = sampleAuditLogs[documentId][0];
+    if (action === 'Viewed' && lastLog?.action === 'Viewed' && lastLog?.userId === userId && (new Date().getTime() - new Date(lastLog.timestamp).getTime()) < 60000) { // 1 minute threshold
+        return;
+    }
+
+    sampleAuditLogs[documentId].unshift({ // Add to the beginning for latest first
         timestamp: new Date().toISOString(),
         userId,
         userName,
         action,
         details
     });
-     sampleAuditLogs[documentId].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()); // Keep sorted
+     // Keep log size manageable (optional)
+     // if (sampleAuditLogs[documentId].length > 50) {
+     //    sampleAuditLogs[documentId].pop();
+     // }
 }
 
 
 // --- Utility ---
 
 export const formatBytes = (bytes: number, decimals = 2): string => {
-  if (bytes === 0) return '0 Bytes';
+  if (!bytes || bytes === 0) return '0 Bytes'; // Handle null/zero bytes
   const k = 1024;
   const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  // Ensure we don't go beyond the defined sizes array
+  const sizeIndex = Math.min(i, sizes.length - 1);
+  return parseFloat((bytes / Math.pow(k, sizeIndex)).toFixed(dm)) + ' ' + sizes[sizeIndex];
 }
 
 /**
  * Returns a string identifier representing the file type icon.
  * Use this identifier in the frontend to map to actual icon components (e.g., Lucide icons).
- * @param mimeType The MIME type of the file.
- * @returns A string identifier ('pdf', 'word', 'text', 'file').
+ * @param mimeType The MIME type of the file. Can be undefined.
+ * @returns A string identifier ('pdf', 'word', 'excel', 'powerpoint', 'image', 'zip', 'text', 'file').
  */
-export const getFileIconType = (mimeType: string): FileIconType => {
-    if (mimeType.includes('pdf')) return 'pdf';
-    if (mimeType.includes('word')) return 'word';
-    if (mimeType.includes('text')) return 'text';
+export const getFileIconType = (mimeType?: string): FileIconType => {
+    if (!mimeType) return 'file'; // Default if MIME type is unknown
+
+    const lowerMime = mimeType.toLowerCase();
+
+    if (lowerMime.includes('pdf')) return 'pdf';
+    if (lowerMime.includes('word')) return 'word'; // .doc, .docx
+    if (lowerMime.includes('spreadsheet') || lowerMime.includes('excel')) return 'excel'; // .xls, .xlsx
+    if (lowerMime.includes('presentation') || lowerMime.includes('powerpoint')) return 'powerpoint'; // .ppt, .pptx
+    if (lowerMime.startsWith('image/')) return 'image'; // .png, .jpg, .gif, etc.
+    if (lowerMime.includes('zip') || lowerMime.includes('compressed')) return 'zip'; // .zip, .rar, .7z etc.
+    if (lowerMime.startsWith('text/')) return 'text'; // .txt, .csv, .log etc.
+
     return 'file'; // Default file icon type
 }
 
@@ -587,14 +660,13 @@ export const getStatusBadgeVariant = (status: DocumentStatus | PrintRequest['sta
   switch (status) {
     case 'Uploaded': return { variant: 'secondary', className: 'bg-blue-100 text-blue-800 border-blue-300' };
     case 'Pending Approval': return { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' };
-    case 'Approved for Print': return { variant: 'default', className: 'bg-green-100 text-green-800 border-green-300' };
-    case 'Approved': return { variant: 'default', className: 'bg-green-100 text-green-800 border-green-300' }; // For PrintRequest
+    case 'Pending': return { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' }; // For PrintRequest
+    case 'Approved for Print': return { variant: 'default', className: 'bg-teal-100 text-teal-800 border-teal-300' }; // Changed color
+    case 'Approved': return { variant: 'default', className: 'bg-green-100 text-green-800 border-green-300' }; // For PrintRequest (different from doc approval)
     case 'Printing': return { variant: 'secondary', className: 'bg-purple-100 text-purple-800 border-purple-300' };
     case 'Printed': return { variant: 'default', className: 'bg-gray-100 text-gray-800 border-gray-300' };
     case 'Archived': return { variant: 'outline', className: 'bg-gray-50 text-gray-500 border-gray-200' };
     case 'Rejected': return { variant: 'destructive', className: 'bg-red-100 text-red-800 border-red-300' };
-    case 'Pending': return { variant: 'secondary', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' }; // For PrintRequest
     default: return { variant: 'outline', className: '' };
   }
 };
-
