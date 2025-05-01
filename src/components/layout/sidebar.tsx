@@ -14,7 +14,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity } from "lucide-react"; // Removed duplicate BellRing import
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Added BarChartBig
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser } from "@/types/user"; // Import UserRole and fetch function
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -50,6 +50,7 @@ const navItems: NavItem[] = [
   { href: "/admin/users", label: "Users", icon: <User />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/roles", label: "Roles", icon: <ShieldCheck />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/modules", label: "Modules", icon: <Settings />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
   { href: "/admin/logs", label: "Logs", icon: <FileText />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/broadcasts", label: "Broadcasts", icon: <Activity />, roles: ["admin"], isAdminSection: true }, // Changed icon to Activity as BellRing was duplicate
@@ -83,6 +84,11 @@ export function AppSidebar() {
 
 
   const renderMenuItems = (items: NavItem[]) => {
+     // Sort admin items alphabetically by label
+     if (items === adminNavItems) {
+        items.sort((a, b) => a.label.localeCompare(b.label));
+     }
+
      return items.map((item) => {
          const isActive = pathname === item.href || (item.href !== "/" && !item.isDashboardLink && pathname.startsWith(item.href));
          // Special check for admin root dashboard link

@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, ShieldCheck, Settings, FileText, DatabaseZap, Activity, BellRing } from "lucide-react";
+import { Users, ShieldCheck, Settings, FileText, DatabaseZap, Activity, BellRing, BarChartBig } from "lucide-react"; // Added BarChartBig
 import Link from "next/link";
 import { AuthUser, getCurrentUser, UserRole } from "@/types/user";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
             </section>
 
             {/* Quick Access Links Section */}
-            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                  <QuickAccessCard
                     title="User Management"
                     icon={<Users />}
@@ -121,6 +121,12 @@ export default function AdminDashboardPage() {
                     icon={<Settings />}
                     link="/admin/modules"
                     description="Enable/disable modules and set configurations."
+                 />
+                  <QuickAccessCard
+                    title="Analytics & Reports"
+                    icon={<BarChartBig />}
+                    link="/admin/analytics"
+                    description="View insights and generate reports."
                  />
                  <QuickAccessCard
                     title="Audit Logs"
@@ -225,8 +231,8 @@ function AdminDashboardSkeleton() {
             </section>
 
              {/* Quick Access Cards Skeleton */}
-             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                 {Array.from({ length: 6 }).map((_, i) => (
+             <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                 {Array.from({ length: 7 }).map((_, i) => ( // Adjusted length to 7 for the new card
                     <Card key={i}>
                         <CardHeader className="flex flex-row items-center gap-4 space-y-0">
                            <Skeleton className="h-12 w-12 rounded-lg" />
