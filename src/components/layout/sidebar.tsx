@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Keep BellRing if used elsewhere, or remove if replaced fully by Bell
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, Activity, BarChartBig } from "lucide-react"; // Corrected import - removed duplicate BellRing
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser, logoutUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -148,19 +148,19 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex items-center justify-between p-4">
+      <SidebarHeader className="flex items-center justify-start p-4 group-data-[collapsible=icon]:justify-center">
          {/* Logo/App Name for Sidebar */}
-         <Link href="/" className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-             {/* User should place their logo image at /public/spark-logo.png */}
+         <Link href="/" className="flex items-center gap-2 overflow-hidden">
+             {/* Use next/image and increased size */}
              <Image
                 src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
-                width={32}
-                height={32}
-                className="h-8 w-8" // Adjust size as needed
+                width={120} // Increased width for horizontal logo
+                height={30} // Adjust height based on aspect ratio
+                className="h-8 w-auto flex-shrink-0" // Use h-8 (32px) and w-auto
                 priority // Load logo quickly
              />
-           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground">CampusConnect</span>
+           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap">CampusConnect</span>
          </Link>
          {/* Mobile trigger might be redundant if header handles it, but keep for potential standalone use */}
          {/* <SidebarTrigger className="md:hidden" /> */}
@@ -232,5 +232,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-

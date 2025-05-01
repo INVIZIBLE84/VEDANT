@@ -19,6 +19,7 @@ import { LogIn, Loader2, AlertCircle } from "lucide-react";
 import { authenticateUser } from "@/services/auth"; // Import mock authentication service
 import { loginUser, getCurrentUser, UserRole } from "@/types/user"; // Import login simulation
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image"; // Import next/image
 
 export default function LoginPage() {
   const router = useRouter();
@@ -92,7 +93,15 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-muted/50 to-background">
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
-          <img src="/S.P.A.R.K..svg" alt="CampusConnect Logo" className="w-16 h-16 mx-auto mb-2"/>
+          {/* Increased logo size */}
+          <Image
+            src="/S.P.A.R.K..svg"
+            alt="CampusConnect S.P.A.R.K. Logo"
+            width={160} // Increased width
+            height={40} // Adjust height based on logo's aspect ratio
+            className="mx-auto mb-4 h-auto" // Use h-auto to maintain aspect ratio
+            priority
+          />
           <CardTitle className="text-2xl font-bold text-primary">CampusConnect Login</CardTitle>
           <CardDescription>
             Enter your username and password to access your dashboard.
