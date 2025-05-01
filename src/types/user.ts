@@ -1,7 +1,8 @@
+
 /**
  * Defines the possible roles a user can have within the application.
  */
-export type UserRole = "student" | "faculty" | "admin" | "print_cell"; // Added print_cell
+export type UserRole = "student" | "faculty" | "admin" | "print_cell" | "clearance_officer"; // Added clearance_officer
 
 /**
  * Represents the profile information for a user.
@@ -17,6 +18,7 @@ export interface UserProfile {
   avatarUrl?: string; // URL for profile picture
   phone?: string; // Optional contact phone number
   address?: string; // Optional address
+  isLocked?: boolean; // Added isLocked status
   // Add other relevant fields as needed
 }
 
@@ -33,13 +35,14 @@ export interface AuthUser extends UserProfile {
 // In a real app, this would interact with your authentication provider (e.g., Firebase Auth)
 export async function getCurrentUser(): Promise<AuthUser | null> {
    // Simulate fetching based on a mock role
-   // CHANGE THIS VALUE TO TEST DIFFERENT ROLES: "student", "faculty", "admin", "print_cell"
-   const MOCK_ROLE: UserRole = "faculty";
+   // CHANGE THIS VALUE TO TEST DIFFERENT ROLES: "student", "faculty", "admin", "print_cell", "clearance_officer"
+   const MOCK_ROLE: UserRole = "admin";
    const MOCK_ID_MAP = {
        student: "student123",
        faculty: "faculty999",
        admin: "admin001",
-       print_cell: "printcell007" // Added ID for print_cell
+       print_cell: "printcell007",
+       clearance_officer: "clearance01" // Added ID for clearance_officer
    };
 
    await new Promise(resolve => setTimeout(resolve, 50)); // Simulate async fetch
@@ -54,17 +57,19 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             department: "Computer Science",
             avatarUrl: "https://picsum.photos/seed/alice/100/100",
             isAuthenticated: true,
+            isLocked: false,
         };
     } else if (MOCK_ROLE === 'faculty') {
          return {
              id: MOCK_ID_MAP.faculty,
-             name: "Dr. Turing",
+             name: "Dr. Alan Turing",
              email: "alan.turing@campusconnect.edu",
              role: "faculty",
              facultyId: "F999",
              department: "Computer Science",
              avatarUrl: "https://picsum.photos/seed/turing/100/100",
              isAuthenticated: true,
+             isLocked: false,
          };
     } else if (MOCK_ROLE === 'admin') {
          return {
@@ -72,11 +77,12 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              name: "Admin User",
              email: "admin@campusconnect.edu",
              role: "admin",
-             department: "Administration", // Added department for admin
+             department: "Administration",
              avatarUrl: "https://picsum.photos/seed/admin/100/100",
              isAuthenticated: true,
+             isLocked: false,
          };
-    } else if (MOCK_ROLE === 'print_cell') { // Added print_cell user
+    } else if (MOCK_ROLE === 'print_cell') {
          return {
             id: MOCK_ID_MAP.print_cell,
             name: "Print Operator",
@@ -85,6 +91,18 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             department: "Printing Services",
             avatarUrl: "https://picsum.photos/seed/print/100/100",
             isAuthenticated: true,
+            isLocked: false,
+         };
+    } else if (MOCK_ROLE === 'clearance_officer') { // Added clearance_officer user
+         return {
+            id: MOCK_ID_MAP.clearance_officer,
+            name: "Clearance Officer Lib",
+            email: "library.clear@campusconnect.edu",
+            role: "clearance_officer",
+            department: "Library", // Department determines which steps they handle
+            avatarUrl: "https://picsum.photos/seed/library/100/100",
+            isAuthenticated: true,
+            isLocked: false,
          };
     }
 

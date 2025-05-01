@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react"; // Import React for hooks
@@ -12,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button"; // Import Button
 import { LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { AuthUser, getCurrentUser } from "@/types/user"; // Import types and fetch function
@@ -72,7 +74,8 @@ export function Header() {
                 </DropdownMenuItem>
                  {user.role === 'admin' && ( // Only show settings for admin
                     <DropdownMenuItem asChild>
-                    <Link href="/settings" className="cursor-pointer">
+                    {/* Link to the new admin modules page */}
+                    <Link href="/admin/modules" className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Settings</span>
                     </Link>
