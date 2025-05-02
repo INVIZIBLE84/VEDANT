@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react"; // Corrected import
+import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser, logoutUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -53,7 +53,7 @@ const navItems: NavItem[] = [
   { href: "/admin/roles", label: "Roles", icon: <ShieldCheck />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/modules", label: "Modules", icon: <Settings />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
-  { href: "/admin/logs", label: "Logs", icon: <FileText />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/logs", label: "Logs", icon: <Activity />, roles: ["admin"], isAdminSection: true }, // Changed icon to Activity for logs
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRing />, roles: ["admin"], isAdminSection: true }, // Use BellRing here
 ];
@@ -149,22 +149,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex items-center justify-start p-4 group-data-[collapsible=icon]:justify-center">
+      {/* Updated SidebarHeader to center content */}
+      <SidebarHeader className="flex items-center justify-center p-4">
          {/* Logo/App Name for Sidebar */}
          <Link href="/" className="flex items-center gap-2 overflow-hidden">
              {/* Use next/image and increased size */}
              <Image
                 src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
-                width={150} // Increased width for horizontal logo
+                width={150} // Width for horizontal logo
                 height={37} // Adjust height based on aspect ratio
-                className="h-9 w-auto flex-shrink-0" // Adjusted height
+                className="h-auto max-w-full" // Maintain aspect ratio, ensure it fits
                 priority // Load logo quickly
              />
+           {/* Keep the CampusConnect text hidden when collapsed */}
            <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap">CampusConnect</span>
          </Link>
-         {/* Mobile trigger might be redundant if header handles it, but keep for potential standalone use */}
-         {/* <SidebarTrigger className="md:hidden" /> */}
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
