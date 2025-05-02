@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Settings, ToggleLeft, ToggleRight, Loader2, Save, Lock, Unlock, Wifi, MapPin, RadioTower } from "lucide-react"; // Added icons
+import { Settings, ToggleLeft, ToggleRight, Loader2, Save, Lock, Unlock, Wifi, MapPin, RadioTower, User } from "lucide-react"; // Added User icon
 import { useToast } from "@/hooks/use-toast";
 import { getModuleConfigs, updateModuleConfig, type ModuleConfig, type AttendanceMethod } from "@/services/admin"; // Import module service functions
 import { Skeleton } from "@/components/ui/skeleton";
@@ -240,3 +240,6 @@ export default function AdminModulesPage() {
         </div>
     );
 }
+
+
+    
