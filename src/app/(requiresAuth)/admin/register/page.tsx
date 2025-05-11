@@ -93,10 +93,10 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/S.P.A.R.K..svg"
-             alt="CampusConnect S.P.A.R.K. Logo"
-             width={160}
-             height={40}
+             src="/CyberSentinels_VEDANT_logo.svg"
+             alt="CyberSentinels VEDANT Logo"
+             width={200}
+             height={50}
              className="mx-auto mb-4 h-auto"
              priority
            />

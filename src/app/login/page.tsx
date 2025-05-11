@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -93,13 +94,13 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-muted/50 to-background">
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
-          {/* Increased logo size */}
+          {/* Updated logo path and size */}
           <Image
-            src="/S.P.A.R.K..svg"
-            alt="CampusConnect S.P.A.R.K. Logo"
-            width={160} // Increased width
-            height={40} // Adjust height based on logo's aspect ratio
-            className="mx-auto mb-4 h-auto" // Use h-auto to maintain aspect ratio
+            src="/CyberSentinels_VEDANT_logo.svg"
+            alt="CyberSentinels VEDANT Logo"
+            width={200} 
+            height={50} 
+            className="mx-auto mb-4 h-auto"
             priority
           />
           <CardTitle className="text-2xl font-bold text-primary">CampusConnect Login</CardTitle>

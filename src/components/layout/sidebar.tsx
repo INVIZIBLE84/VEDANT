@@ -15,9 +15,9 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react";
+import { BarChart3, DollarSign, CheckCircle, FileText, User as UserIcon, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react"; // Renamed User to UserIcon
 import { cn } from "@/lib/utils";
-import { UserRole, getCurrentUser, logoutUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
+import { UserRole, getCurrentUser, logoutUser, AuthUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Separator } from "@/components/ui/separator"; // Import Separator
 import { useToast } from "@/hooks/use-toast"; // Import useToast
@@ -46,10 +46,10 @@ const navItems: NavItem[] = [
   { href: "/schedule", label: "Schedule", icon: <CalendarClock />, roles: ["student", "faculty"] },
   { href: "/documents", label: "Documents", icon: <FileText />, roles: ["student", "faculty", "admin", "print_cell"] },
   { href: "/notifications", label: "Notifications", icon: <Bell />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
-  { href: "/profile", label: "Profile", icon: <User />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
+  { href: "/profile", label: "Profile", icon: <UserIcon />, roles: ["student", "faculty", "admin", "print_cell", "clearance_officer"] },
 
   // Admin Sections (Excluding the main admin dashboard link which is now above)
-  { href: "/admin/users", label: "Users", icon: <User />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/users", label: "Users", icon: <UserIcon />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/roles", label: "Roles", icon: <ShieldCheck />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/modules", label: "Modules", icon: <Settings />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
@@ -62,26 +62,26 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter(); // Hook for navigation
   const { toast } = useToast(); // Hook for toasts
-  const [currentUserRole, setCurrentUserRole] = React.useState<UserRole | null>(null);
+  const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null); // Changed to store full user object
   const [isLoading, setIsLoading] = React.useState(true);
   const [isLoggingOut, setIsLoggingOut] = React.useState(false); // State for logout operation
 
 
    // Fetch user role on component mount and path change
    React.useEffect(() => {
-     const fetchUserRole = async () => {
+     const fetchUser = async () => {
        setIsLoading(true);
        const user = await getCurrentUser(); // Fetch the current user
        console.log("AppSidebar: Fetched user in useEffect:", user); // Debug log
-       setCurrentUserRole(user?.role ?? null); // Set the role, default to null if no user
+       setCurrentUser(user); // Set the full user object
        setIsLoading(false);
      };
-     fetchUserRole();
+     fetchUser();
    }, [pathname]); // Re-run when the path changes
 
 
    // Filter items based on the current user's role
-  const filteredNavItems = navItems.filter(item => currentUserRole && item.roles.includes(currentUserRole));
+  const filteredNavItems = navItems.filter(item => currentUser && item.roles.includes(currentUser.role));
 
   // Separate dashboard links, general links, and admin-specific links
   const dashboardLinks = filteredNavItems.filter(item => item.isDashboardLink);
@@ -93,7 +93,7 @@ export function AppSidebar() {
       setIsLoggingOut(true); // Indicate logout in progress
       try {
           await logoutUser(); // Call the simulated logout function
-          setCurrentUserRole(null); // Clear local user role state
+          setCurrentUser(null); // Clear local user state
           toast({
               title: "Logged Out",
               description: "You have been successfully logged out.",
@@ -152,18 +152,18 @@ export function AppSidebar() {
       {/* Updated SidebarHeader to center content */}
       <SidebarHeader className="flex items-center justify-center p-4">
          {/* Logo/App Name for Sidebar */}
-         <Link href="/" className="flex items-center gap-2 overflow-hidden">
+         <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              {/* Use next/image and increased size */}
              <Image
-                src="/S.P.A.R.K..svg"
-                alt="S.P.A.R.K. Logo"
-                width={150} // Width for horizontal logo
-                height={37} // Adjust height based on aspect ratio
-                className="h-auto max-w-full" // Maintain aspect ratio, ensure it fits
+                src="/CyberSentinels_VEDANT_logo.svg"
+                alt="CyberSentinels VEDANT Logo"
+                width={180} // Increased width
+                height={45}  // Adjusted height based on aspect ratio
+                className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto" // Adjust icon state size
                 priority // Load logo quickly
              />
            {/* Keep the CampusConnect text hidden when collapsed */}
-           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap">CampusConnect</span>
+           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap mt-1">CampusConnect</span>
          </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
@@ -180,7 +180,7 @@ export function AppSidebar() {
                      </SidebarMenuButton>
                 </SidebarMenuItem>
              ))
-           ) : currentUserRole ? ( // Render items only if role is determined
+           ) : currentUser ? ( // Render items only if role is determined
              <>
                  {/* Render Dashboard Link First */}
                  {renderMenuItems(dashboardLinks)}
@@ -220,7 +220,7 @@ export function AppSidebar() {
                  <SidebarMenuButton
                    tooltip="Logout"
                    className="text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
-                    disabled={isLoading || !currentUserRole || isLoggingOut} // Disable if loading, not logged in, or logging out
+                    disabled={isLoading || !currentUser || isLoggingOut} // Disable if loading, not logged in, or logging out
                     onClick={handleLogout}
                  >
                     <LogOut />
