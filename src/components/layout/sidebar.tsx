@@ -155,12 +155,12 @@ export function AppSidebar() {
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              {/* Use next/image and increased size */}
              <Image
-                src="/CyberSentinels_VEDANT_logo.svg"
+                src="/CyberSentinels_VEDANT_logo.png"
                 alt="CyberSentinels VEDANT Logo"
-                width={200} // Increased width
-                height={50}  // Adjusted height based on aspect ratio (4:1)
-                className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto" // Adjust icon state size
-                priority // Load logo quickly
+                width={220} 
+                height={55}  
+                className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto" 
+                priority 
              />
            {/* Keep the CampusConnect text hidden when collapsed */}
            <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap mt-1">CampusConnect</span>

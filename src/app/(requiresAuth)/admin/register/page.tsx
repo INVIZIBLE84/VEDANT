@@ -93,7 +93,7 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/CyberSentinels_VEDANT_logo.svg"
+             src="/CyberSentinels_VEDANT_logo.png"
              alt="CyberSentinels VEDANT Logo"
              width={280}
              height={70}

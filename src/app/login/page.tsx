@@ -96,7 +96,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-1 text-center">
           {/* Updated logo path and size */}
           <Image
-            src="/CyberSentinels_VEDANT_logo.svg"
+            src="/CyberSentinels_VEDANT_logo.png"
             alt="CyberSentinels VEDANT Logo"
             width={280} 
             height={70} 
@@ -165,3 +165,4 @@ export default function LoginPage() {
     </div>
   );
 }
+
