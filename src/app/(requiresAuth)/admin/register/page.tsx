@@ -95,8 +95,8 @@ export default function AdminRegisterPage() {
            <Image
              src="/CyberSentinels_VEDANT_logo.svg"
              alt="CyberSentinels VEDANT Logo"
-             width={200}
-             height={50}
+             width={280}
+             height={70}
              className="mx-auto mb-4 h-auto"
              priority
            />

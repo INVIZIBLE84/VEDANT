@@ -157,8 +157,8 @@ export function AppSidebar() {
              <Image
                 src="/CyberSentinels_VEDANT_logo.svg"
                 alt="CyberSentinels VEDANT Logo"
-                width={180} // Increased width
-                height={45}  // Adjusted height based on aspect ratio
+                width={200} // Increased width
+                height={50}  // Adjusted height based on aspect ratio (4:1)
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto" // Adjust icon state size
                 priority // Load logo quickly
              />
