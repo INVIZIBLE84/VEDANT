@@ -93,11 +93,11 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/CyberSentinels_VEDANT_logo.png"
-             alt="CyberSentinels VEDANT Logo"
-             width={280}
-             height={70}
-             className="mx-auto mb-4 h-auto"
+             src="/S.P.A.R.K..svg"
+             alt="S.P.A.R.K. Logo"
+             width={300}
+             height={75}
+             className="mx-auto mb-4 h-auto text-primary"
              priority
            />
           <CardTitle className="text-2xl font-bold text-primary">Register New User</CardTitle>

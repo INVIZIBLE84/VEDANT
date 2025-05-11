@@ -15,7 +15,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User as UserIcon, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing, Activity, BarChartBig } from "lucide-react"; // Renamed User to UserIcon
+import { BarChart3, DollarSign, CheckCircle, FileText, User as UserIcon, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing as BellRingIcon, Activity, BarChartBig } from "lucide-react"; // Renamed User to UserIcon, BellRing to BellRingIcon
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser, logoutUser, AuthUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -52,10 +52,10 @@ const navItems: NavItem[] = [
   { href: "/admin/users", label: "Users", icon: <UserIcon />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/roles", label: "Roles", icon: <ShieldCheck />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/modules", label: "Modules", icon: <Settings />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true }, // Added Analytics link
-  { href: "/admin/logs", label: "Logs", icon: <Activity />, roles: ["admin"], isAdminSection: true }, // Changed icon to Activity for logs
+  { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/logs", label: "Logs", icon: <Activity />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRing />, roles: ["admin"], isAdminSection: true }, // Use BellRing here
+  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRingIcon />, roles: ["admin"], isAdminSection: true },
 ];
 
 export function AppSidebar() {
@@ -149,27 +149,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      {/* Updated SidebarHeader to center content */}
       <SidebarHeader className="flex items-center justify-center p-4">
-         {/* Logo/App Name for Sidebar */}
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
-             {/* Use next/image and increased size */}
              <Image
-                src="/CyberSentinels_VEDANT_logo.png"
-                alt="CyberSentinels VEDANT Logo"
-                width={220} 
-                height={55}  
-                className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto" 
-                priority 
+                src="/S.P.A.R.K..svg"
+                alt="S.P.A.R.K. Logo"
+                width={220}
+                height={55}
+                className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto text-sidebar-foreground"
+                priority
              />
-           {/* Keep the CampusConnect text hidden when collapsed */}
-           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-foreground whitespace-nowrap mt-1">CampusConnect</span>
+           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-sidebar-foreground whitespace-nowrap mt-1">CampusConnect</span>
          </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
            {isLoading ? (
-             // Show Skeleton loaders while fetching user role
              Array.from({ length: 8 }).map((_, index) => (
                 <SidebarMenuItem key={`skel-${index}`}>
                      <SidebarMenuButton asChild disabled className="cursor-wait">
@@ -180,18 +175,14 @@ export function AppSidebar() {
                      </SidebarMenuButton>
                 </SidebarMenuItem>
              ))
-           ) : currentUser ? ( // Render items only if role is determined
+           ) : currentUser ? ( 
              <>
-                 {/* Render Dashboard Link First */}
                  {renderMenuItems(dashboardLinks)}
 
-                 {/* Separator if there are general items */}
                  {(generalNavItems.length > 0 || adminNavItems.length > 0) && <Separator className="my-2" />}
 
-                 {/* Render General Items */}
                  {renderMenuItems(generalNavItems)}
 
-                {/* Separator and Admin Section Header */}
                 {adminNavItems.length > 0 && (
                     <>
                         <Separator className="my-2 group-data-[collapsible=icon]:hidden" />
@@ -202,7 +193,7 @@ export function AppSidebar() {
                     </>
                 )}
              </>
-           ) : ( // Render "Login Required" if not loading and no role (logged out)
+           ) : ( 
                 <SidebarMenuItem>
                     <SidebarMenuButton disabled asChild>
                         <Link href="/login" className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -214,13 +205,12 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarContent>
        <SidebarFooter className="p-2 mt-auto">
-        {/* Implement Logout */}
          <SidebarMenu>
             <SidebarMenuItem>
                  <SidebarMenuButton
                    tooltip="Logout"
                    className="text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
-                    disabled={isLoading || !currentUser || isLoggingOut} // Disable if loading, not logged in, or logging out
+                    disabled={isLoading || !currentUser || isLoggingOut} 
                     onClick={handleLogout}
                  >
                     <LogOut />

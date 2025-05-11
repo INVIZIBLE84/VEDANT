@@ -94,13 +94,12 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-muted/50 to-background">
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
-          {/* Updated logo path and size */}
           <Image
-            src="/CyberSentinels_VEDANT_logo.png"
-            alt="CyberSentinels VEDANT Logo"
-            width={280} 
-            height={70} 
-            className="mx-auto mb-4 h-auto"
+            src="/S.P.A.R.K..svg"
+            alt="S.P.A.R.K. Logo"
+            width={300} 
+            height={75} 
+            className="mx-auto mb-4 h-auto text-primary"
             priority
           />
           <CardTitle className="text-2xl font-bold text-primary">CampusConnect Login</CardTitle>
@@ -141,11 +140,6 @@ export default function LoginPage() {
                 disabled={isLoading}
               />
             </div>
-             {/* TODO: Add "Remember Me" checkbox - needs state management */}
-             {/* <div className="flex items-center space-x-2">
-               <Checkbox id="remember-me" />
-               <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
-             </div> */}
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isLoading}>
@@ -165,4 +159,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
