@@ -3,13 +3,13 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Added CardFooter
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog } from "@/components/ui/dialog"; // Dialog is used directly by IndividualStudentReportDialog
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter as DialogPrimitiveFooter } from "@/components/ui/dialog"; // Renamed DialogFooter to avoid conflict
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, Upload, Search, Filter, Edit, Trash2, KeyRound, Lock, Unlock, Loader2, FileText as ReportIcon } from "lucide-react"; // Added ReportIcon
@@ -231,11 +231,11 @@ export default function AdminUsersPage() {
 
             {/* Edit User Dialog */}
             <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) setCurrentUser(null); setShowUserDialog(open); }}>
-                 <CardContent className="max-w-lg"> {/* Changed DialogContent to CardContent to avoid nesting issues, needs styling review */}
-                     <CardHeader> {/* Changed DialogHeader to CardHeader */}
-                        <CardTitle>Edit User</CardTitle> {/* Changed DialogTitle to CardTitle */}
-                        <CardDescription>Update details for {currentUser?.name}</CardDescription> {/* Changed DialogDescription to CardDescription */}
-                     </CardHeader>
+                 <DialogContent className="max-w-lg">
+                     <DialogHeader>
+                        <DialogTitle>Edit User</DialogTitle>
+                        <DialogDescription>Update details for {currentUser?.name}</DialogDescription>
+                     </DialogHeader>
                      {/* Edit Form */}
                      <form onSubmit={handleEditFormSubmit} className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -274,15 +274,15 @@ export default function AdminUsersPage() {
                              <Input id="edit-facultyId" name="facultyId" defaultValue={currentUser?.facultyId} className="col-span-3" placeholder="If faculty"/>
                           </div>
 
-                        <CardFooter> {/* Changed DialogFooter to CardFooter */}
+                        <DialogPrimitiveFooter> {/* Use the aliased DialogFooter */}
                             <Button type="button" variant="ghost" onClick={() => {setShowUserDialog(false); setCurrentUser(null);}}>Cancel</Button>
                             <Button type="submit" disabled={isSubmitting}>
                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                  Save Changes
                             </Button>
-                        </CardFooter>
+                        </DialogPrimitiveFooter>
                      </form>
-                 </CardContent>
+                 </DialogContent>
             </Dialog>
 
             {/* Individual Student Report Dialog */}
