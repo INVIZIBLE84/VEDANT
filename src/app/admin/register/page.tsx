@@ -93,12 +93,12 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/Vedant.png" 
-             alt="Cyber Sentinels VEDANT Logo" 
+             src="/Vedant.png"
+             alt="Cyber Sentinels VEDANT Logo"
              data-ai-hint="cyber logo"
-             width={220} 
-             height={55} 
-             className="mx-auto mb-4 h-auto text-primary"
+             width={220}
+             height={55}
+             className="mx-auto mb-4 h-auto"
              priority
            />
           <CardTitle className="text-2xl font-bold text-primary">Register New User</CardTitle>
@@ -186,4 +186,3 @@ export default function AdminRegisterPage() {
     </div>
   );
 }
-

@@ -155,8 +155,8 @@ export function AppSidebar() {
                 src="/Vedant.png"
                 alt="Cyber Sentinels VEDANT Logo"
                 data-ai-hint="cyber logo"
-                width={220} 
-                height={55} 
+                width={220}
+                height={55}
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
@@ -222,4 +222,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
