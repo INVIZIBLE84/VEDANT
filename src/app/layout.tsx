@@ -24,7 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>{/* Added suppressHydrationWarning for theme switching etc. */}
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}> {/* Ensured font-sans class is applied */}
         <SidebarProvider>
           <AppSidebar />
