@@ -149,14 +149,14 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex items-center justify-center p-4">
+      <SidebarHeader className="flex flex-col items-center justify-center p-4"> {/* Centering content */}
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="/S.P.A.R.K..svg"
-                alt="S.P.A.R.K. Logo"
-                data-ai-hint="ai education logo"
-                width={350} 
-                height={87.5} 
+                src="/Vedant.png" // Reverted to Vedant.png
+                alt="S.P.A.R.K. Logo" // Updated alt text
+                data-ai-hint="cyber logo" // Reverted data-ai-hint
+                width={220} // Adjusted width
+                height={55} // Adjusted height
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
@@ -176,7 +176,7 @@ export function AppSidebar() {
                      </SidebarMenuButton>
                 </SidebarMenuItem>
              ))
-           ) : currentUser ? ( 
+           ) : currentUser ? (
              <>
                  {renderMenuItems(dashboardLinks)}
 
@@ -194,7 +194,7 @@ export function AppSidebar() {
                     </>
                 )}
              </>
-           ) : ( 
+           ) : (
                 <SidebarMenuItem>
                     <SidebarMenuButton disabled asChild>
                         <Link href="/login" className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
@@ -211,7 +211,7 @@ export function AppSidebar() {
                  <SidebarMenuButton
                    tooltip="Logout"
                    className="text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
-                    disabled={isLoading || !currentUser || isLoggingOut} 
+                    disabled={isLoading || !currentUser || isLoggingOut}
                     onClick={handleLogout}
                  >
                     <LogOut />

@@ -14,7 +14,7 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: "S.P.A.R.K.", // Removed "CampusConnect"
+  title: "S.P.A.R.K.", // Ensured "CampusConnect" is removed
   description: "S.P.A.R.K. - System for Performance Analytics, Recognition & Kinetics",
 };
 

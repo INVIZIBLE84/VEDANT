@@ -158,18 +158,21 @@ function SummaryCard({ title, value, icon, description, link, linkText }: Summar
             <CardContent style={{ transformStyle: 'preserve-3d' }}>
                 <div className="text-2xl font-bold transform transition-transform duration-300 group-hover:translate-z-2">{value}</div>
                 {description && <p className="text-xs text-muted-foreground transform transition-transform duration-300 group-hover:translate-z-4">{description}</p>}
-                {/* If the entire card is linked, don't render an inner link - just text */}
-                 {link && linkText && (
+                 {link && linkText && !link.startsWith('http') && ( // Render as simple text if it's an internal link, as the card itself is linked
                     <p className="text-xs text-accent mt-2 block group-hover:underline">
                         {linkText}
                     </p>
                  )}
+                 {link && linkText && link.startsWith('http') && ( // Render as an actual link if external
+                    <a href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-accent hover:underline mt-2 block">
+                        {linkText}
+                    </a>
+                 )}
             </CardContent>
         </Card>
     );
-
-    // If a link is provided, wrap the entire card with the Link component
-     return link ? <Link href={link} className="no-underline">{content}</Link> : content;
+    
+    return link ? <Link href={link} className="no-underline">{content}</Link> : content;
 }
 
 
@@ -236,3 +239,4 @@ function AdminDashboardSkeleton() {
         </div>
     );
 }
+
