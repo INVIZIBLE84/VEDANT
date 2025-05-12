@@ -1,15 +1,15 @@
-
 "use client";
 
 import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { BarChartBig, Download, Filter, Calendar as CalendarIcon, Loader2, Users, AlertTriangle, DollarSign, FileCheck, BrainCircuit } from "lucide-react";
+import { BarChartBig, Download, Filter, Calendar as CalendarIcon, Loader2, Users, AlertTriangle, DollarSign, FileCheck, BrainCircuit, UserSearch } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import {
@@ -24,8 +24,10 @@ import {
     type StudentBehaviorAnalytics,
     type AnalyticsFilters,
     type ReportType,
-    type StudentBehaviorClassification // Added import
+    type StudentBehaviorClassification
 } from "@/services/analytics";
+import { generateIndividualStudentReport, type IndividualStudentReportData } from "@/services/reports";
+import IndividualStudentReportDialog from "@/components/admin/IndividualStudentReportDialog";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -35,7 +37,7 @@ const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3
 const BEHAVIOR_COLORS: Record<string, string> = {
     'Regular': 'hsl(var(--chart-1))',
     'At Risk': 'hsl(var(--chart-4))',
-    'Critical': 'hsl(var(--chart-2))', // Use chart-2 for critical (often red-like)
+    'Critical': 'hsl(var(--chart-2))',
 };
 
 export default function AdminAnalyticsPage() {
@@ -53,6 +55,13 @@ export default function AdminAnalyticsPage() {
     const [feeData, setFeeData] = React.useState<FeeAnalytics | null>(null);
     const [clearanceData, setClearanceData] = React.useState<ClearanceAnalytics | null>(null);
     const [behaviorData, setBehaviorData] = React.useState<StudentBehaviorAnalytics[]>([]);
+
+    // Individual Student Report State
+    const [showIndividualReportDialog, setShowIndividualReportDialog] = React.useState(false);
+    const [individualReportData, setIndividualReportData] = React.useState<IndividualStudentReportData | null>(null);
+    const [isIndividualReportLoading, setIsIndividualReportLoading] = React.useState(false);
+    const [searchStudentIdInput, setSearchStudentIdInput] = React.useState("");
+
 
     // Fetch data when tab or filters change
     React.useEffect(() => {
@@ -85,8 +94,6 @@ export default function AdminAnalyticsPage() {
                 setIsLoading(false);
             }
         };
-
-        // Debounce or fetch immediately? Fetch immediately for now.
         fetchData();
     }, [activeTab, filters, dateRange, toast]);
 
@@ -121,6 +128,32 @@ export default function AdminAnalyticsPage() {
             setIsExporting(false);
          }
      };
+
+     const handleGenerateIndividualReport = async () => {
+        if (!searchStudentIdInput.trim()) {
+            toast({ variant: "destructive", title: "Error", description: "Please enter a Student ID." });
+            return;
+        }
+        setIsIndividualReportLoading(true);
+        setShowIndividualReportDialog(true);
+        setIndividualReportData(null);
+        try {
+            const data = await generateIndividualStudentReport(searchStudentIdInput.trim());
+            if (data) {
+                setIndividualReportData(data);
+            } else {
+                toast({ variant: "destructive", title: "Report Error", description: "Could not generate report for this student." });
+                setShowIndividualReportDialog(false);
+            }
+        } catch (error) {
+            console.error("Error generating individual student report:", error);
+            toast({ variant: "destructive", title: "Report Error", description: "An unexpected error occurred." });
+            setShowIndividualReportDialog(false);
+        } finally {
+            setIsIndividualReportLoading(false);
+        }
+    };
+
 
      // Chart configurations
      const attendanceChartConfig = {
@@ -229,37 +262,62 @@ export default function AdminAnalyticsPage() {
                 }, {} as Record<StudentBehaviorClassification, number>);
                 const behaviorPieData = Object.entries(behaviorCounts).map(([name, value]) => ({ name: name as StudentBehaviorClassification, value }));
 
-                 return behaviorData.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2">
-                         <ChartCard title="Student Behavior Classification" description="ML-based classification of students">
-                            <ChartContainer config={behaviorChartConfig} className="h-[250px] w-full">
-                                <PieChart>
-                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                    <Pie data={behaviorPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                                        {behaviorPieData.map((entry) => (
-                                            <Cell key={`cell-${entry.name}`} fill={BEHAVIOR_COLORS[entry.name]} />
-                                        ))}
-                                    </Pie>
-                                     <ChartLegend content={<ChartLegendContent />} />
-                                </PieChart>
-                            </ChartContainer>
-                         </ChartCard>
-                         <Card>
-                            <CardHeader><CardTitle>High-Risk Students (Dropout Prediction)</CardTitle></CardHeader>
-                            <CardContent>
-                                <ul className="space-y-2 max-h-[250px] overflow-y-auto">
-                                     {behaviorData.filter(s => s.classification === 'Critical' || (s.dropoutPrediction && s.dropoutPrediction > 0.2)).slice(0, 10).map(s => (
-                                        <li key={s.studentId} className="text-sm flex justify-between border-b pb-1">
-                                             <span>{s.studentName} ({s.studentId}) - {s.department}</span>
-                                             <span className="font-semibold text-red-600">{(s.dropoutPrediction ?? 0 * 100).toFixed(1)}% Risk</span>
-                                         </li>
-                                     ))}
-                                </ul>
+                 return (
+                    <div className="space-y-6">
+                        {behaviorData.length > 0 ? (
+                            <div className="grid gap-6 md:grid-cols-2">
+                                <ChartCard title="Student Behavior Classification" description="ML-based classification of students">
+                                    <ChartContainer config={behaviorChartConfig} className="h-[250px] w-full">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie data={behaviorPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                                {behaviorPieData.map((entry) => (
+                                                    <Cell key={`cell-${entry.name}`} fill={BEHAVIOR_COLORS[entry.name]} />
+                                                ))}
+                                            </Pie>
+                                            <ChartLegend content={<ChartLegendContent />} />
+                                        </PieChart>
+                                    </ChartContainer>
+                                </ChartCard>
+                                <Card>
+                                    <CardHeader><CardTitle>High-Risk Students (Dropout Prediction)</CardTitle></CardHeader>
+                                    <CardContent>
+                                        <ul className="space-y-2 max-h-[250px] overflow-y-auto">
+                                            {behaviorData.filter(s => s.classification === 'Critical' || (s.dropoutPrediction && s.dropoutPrediction > 0.2)).slice(0, 10).map(s => (
+                                                <li key={s.studentId} className="text-sm flex justify-between border-b pb-1">
+                                                    <span>{s.studentName} ({s.studentId}) - {s.department}</span>
+                                                    <span className="font-semibold text-red-600">{(s.dropoutPrediction ?? 0 * 100).toFixed(1)}% Risk</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        ) : <NoData />}
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><UserSearch />Generate Individual Student Report</CardTitle>
+                                <CardDescription>Enter a Student ID to generate their comprehensive report.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex flex-col sm:flex-row items-end gap-2">
+                                <Input
+                                    placeholder="Enter Student ID (e.g., S12345)"
+                                    value={searchStudentIdInput}
+                                    onChange={(e) => setSearchStudentIdInput(e.target.value)}
+                                    className="flex-grow"
+                                />
+                                <Button
+                                    onClick={handleGenerateIndividualReport}
+                                    disabled={isIndividualReportLoading || !searchStudentIdInput.trim()}
+                                >
+                                    {isIndividualReportLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                    Generate Report
+                                </Button>
                             </CardContent>
-                         </Card>
-                         {/* Add more behavior analytics cards/tables */}
+                        </Card>
                     </div>
-                 ) : <NoData />;
+                );
             default:
                 return <NoData />;
         }
@@ -275,13 +333,11 @@ export default function AdminAnalyticsPage() {
                  </Button>
             </div>
 
-            {/* Filters */}
              <Card>
                  <CardHeader>
                     <CardTitle>Filters</CardTitle>
                  </CardHeader>
                 <CardContent className="flex flex-wrap gap-2">
-                    {/* Department Filter */}
                      <Select value={filters.department} onValueChange={(value) => handleFilterChange('department', value)}>
                          <SelectTrigger className="w-full sm:w-[180px]">
                              <Filter className="h-4 w-4 mr-1 text-muted-foreground inline-block"/>
@@ -292,10 +348,8 @@ export default function AdminAnalyticsPage() {
                              <SelectItem value="Computer Science">Computer Science</SelectItem>
                              <SelectItem value="Physics">Physics</SelectItem>
                              <SelectItem value="Mathematics">Mathematics</SelectItem>
-                             {/* Add more departments */}
                          </SelectContent>
                      </Select>
-                     {/* Semester Filter */}
                      <Select value={filters.semester} onValueChange={(value) => handleFilterChange('semester', value)}>
                          <SelectTrigger className="w-full sm:w-[180px]">
                               <Filter className="h-4 w-4 mr-1 text-muted-foreground inline-block"/>
@@ -305,10 +359,8 @@ export default function AdminAnalyticsPage() {
                              <SelectItem value="all">All Semesters</SelectItem>
                              <SelectItem value="Fall 2024">Fall 2024</SelectItem>
                              <SelectItem value="Spring 2024">Spring 2024</SelectItem>
-                             {/* Add more semesters */}
                          </SelectContent>
                      </Select>
-                     {/* Date Range Picker */}
                      <Popover>
                         <PopoverTrigger asChild>
                             <Button
@@ -362,6 +414,13 @@ export default function AdminAnalyticsPage() {
                 <TabsContent value="clearance" className="mt-4">{renderContent()}</TabsContent>
                 <TabsContent value="behavior" className="mt-4">{renderContent()}</TabsContent>
             </Tabs>
+
+            <IndividualStudentReportDialog
+                isOpen={showIndividualReportDialog}
+                onOpenChange={setShowIndividualReportDialog}
+                reportData={individualReportData}
+                isLoading={isIndividualReportLoading}
+            />
         </div>
     );
 }
@@ -408,13 +467,11 @@ function NoData() {
 function AnalyticsSkeleton() {
     return (
          <div className="space-y-6 animate-pulse">
-             {/* Summary Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                  <Card><CardHeader><Skeleton className="h-4 w-20 rounded" /></CardHeader><CardContent><Skeleton className="h-8 w-16 rounded" /></CardContent></Card>
                  <Card><CardHeader><Skeleton className="h-4 w-24 rounded" /></CardHeader><CardContent><Skeleton className="h-8 w-12 rounded" /></CardContent></Card>
                  <Card><CardHeader><Skeleton className="h-4 w-28 rounded" /></CardHeader><CardContent><Skeleton className="h-8 w-10 rounded" /></CardContent></Card>
              </div>
-             {/* Chart Card */}
             <Card>
                  <CardHeader>
                      <Skeleton className="h-6 w-1/3 rounded" />
