@@ -27,19 +27,14 @@ import { getCurrentUser } from "@/types/user"; // Import getCurrentUser
 import { cn } from "@/lib/utils";
 import { format } from "date-fns"; // Ensure format is imported
 
-// Remove MOCK constants
-// const MOCK_USER_ROLE: UserRole = "student";
-// const MOCK_USER_ID = "student123";
-// const MOCK_FACULTY_ID = "faculty999";
-// const MOCK_ADMIN_ID = "admin001";
 const MOCK_CLASS_ID = "CS101"; // Keep for faculty view simulation, replace later
 
 export default function AttendancePage() {
   const { toast } = useToast();
-  const [userRole, setUserRole] = useState<UserRole | null>(null); // Initialize as null
-  const [userId, setUserId] = useState<string | null>(null); // Initialize as null
-  const [facultyId, setFacultyId] = useState<string | null>(null); // For faculty view
-  const [adminId, setAdminId] = useState<string | null>(null); // For admin view
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [facultyId, setFacultyId] = useState<string | null>(null);
+  const [adminId, setAdminId] = useState<string | null>(null);
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [summary, setSummary] = useState<AttendanceSummary | null>(null);
@@ -47,43 +42,41 @@ export default function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isMarking, setIsMarking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentDateString, setCurrentDateString] = useState<string>('');
 
   // --- Fetch User and Data Effect ---
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
+      setCurrentDateString(new Date().toLocaleDateString()); // Set date string after mount
 
       const currentUser = await getCurrentUser();
       if (!currentUser) {
-         // Handled by layout, but set state for consistency
          setIsLoading(false);
          setError("User not authenticated.");
          return;
       }
 
       setUserRole(currentUser.role);
-      setUserId(currentUser.id); // Common ID
-      if (currentUser.role === 'faculty') setFacultyId(currentUser.facultyId ?? currentUser.id); // Use facultyId or fallback
+      setUserId(currentUser.id);
+      if (currentUser.role === 'faculty') setFacultyId(currentUser.facultyId ?? currentUser.id);
       if (currentUser.role === 'admin') setAdminId(currentUser.id);
 
       try {
         let data: AttendanceRecord[] = [];
-        // Fetch data based on role
         if (currentUser.role === 'student') {
           data = await getStudentAttendance(currentUser.id);
           const status = await getTodayAttendanceStatus(currentUser.id);
           setTodayStatus(status);
         } else if (currentUser.role === 'faculty' && (currentUser.facultyId || currentUser.id)) {
-          // TODO: Add Class ID selection for faculty
           data = await getAttendanceForFaculty(currentUser.facultyId ?? currentUser.id, MOCK_CLASS_ID);
         } else if (currentUser.role === 'admin') {
-          // TODO: Add filters for admin
           data = await getAttendanceForAdmin();
         }
 
         setAttendanceData(data);
-        if (currentUser.role === 'student' || currentUser.role === 'admin') { // Calculate summary for student and potentially admin
+        if (currentUser.role === 'student' || currentUser.role === 'admin') {
             setSummary(calculateAttendanceSummary(data));
         }
 
@@ -101,7 +94,7 @@ export default function AttendancePage() {
     };
 
     fetchData();
-  }, [toast]); // Only fetch user once on mount
+  }, [toast]);
 
 
   // --- Handle Mark Attendance ---
@@ -113,8 +106,7 @@ export default function AttendancePage() {
     setIsMarking(true);
     setError(null);
     try {
-      // Simulate gathering location data (in a real app, use browser APIs)
-      const locationData = { wifiSsid: 'Campus-WiFi' }; // Example: Use navigator.geolocation or wifi scanning lib
+      const locationData = { wifiSsid: 'Campus-WiFi' };
       const result = await markAttendance(userId, locationData);
 
       if (result.success) {
@@ -122,16 +114,11 @@ export default function AttendancePage() {
           title: "Success",
           description: result.message,
         });
-        // Refresh today's status and potentially the list/summary
         const status = await getTodayAttendanceStatus(userId);
         setTodayStatus(status);
-        // Optionally re-fetch all data if needed, though updating locally might be faster
          const updatedData = await getStudentAttendance(userId);
          setAttendanceData(updatedData);
          setSummary(calculateAttendanceSummary(updatedData));
-         // Optimistic update for demonstration (Removed, preferring re-fetch)
-
-
       } else {
         setError(result.message);
         toast({
@@ -157,11 +144,10 @@ export default function AttendancePage() {
   const handleDownloadCSV = async () => {
       if (!userRole) return;
       try {
-          // Use all data fetched for the current view (faculty/admin might have filtered data later)
           const csvData = await exportAttendanceToCSV(attendanceData);
           const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
           const link = document.createElement("a");
-          if (link.download !== undefined) { // Feature detection
+          if (link.download !== undefined) {
               const url = URL.createObjectURL(blob);
               link.setAttribute("href", url);
               link.setAttribute("download", `attendance_report_${userRole}_${new Date().toISOString().split('T')[0]}.csv`);
@@ -179,7 +165,7 @@ export default function AttendancePage() {
 
 
   // --- Render Loading/Error States ---
-  if (isLoading) { // Show skeleton loader on initial load or while refetching
+  if (isLoading) {
     return (
        <div className="space-y-6">
          <h1 className="text-3xl font-bold text-primary">Attendance</h1>
@@ -204,7 +190,6 @@ export default function AttendancePage() {
                 <AlertTitle>Error Loading Data</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
             </Alert>
-            {/* Optionally add a retry button */}
         </div>
     );
    }
@@ -216,7 +201,7 @@ export default function AttendancePage() {
       <Card className="transform transition-transform duration-300 hover:shadow-lg">
         <CardHeader>
           <CardTitle>Today's Attendance</CardTitle>
-           <CardDescription>Status for {new Date().toLocaleDateString()}. Make sure you are on campus!</CardDescription>
+           <CardDescription>{currentDateString ? `Status for ${currentDateString}.` : `Loading date...`} Make sure you are on campus!</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -235,7 +220,7 @@ export default function AttendancePage() {
           </div>
           <Button
             onClick={handleMarkAttendance}
-            disabled={isMarking || todayStatus?.status === 'Present'} // Disable if marking or already present
+            disabled={isMarking || todayStatus?.status === 'Present'}
             className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
           >
             {isMarking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
@@ -269,17 +254,16 @@ export default function AttendancePage() {
          </CardHeader>
           <CardContent className="flex justify-center">
              <Calendar
-                mode="multiple" // Allows highlighting multiple dates
+                mode="multiple"
                 selected={attendanceData.filter(r => r.isPresent).map(r => new Date(r.date))}
                 modifiers={{
                     absent: attendanceData.filter(r => !r.isPresent).map(r => new Date(r.date)),
                 }}
                 modifiersClassNames={{
-                    selected: 'bg-green-500/20 text-green-800 rounded-full', // Present
-                    absent: 'bg-red-500/20 text-red-800 rounded-full line-through', // Absent
+                    selected: 'bg-green-500/20 text-green-800 rounded-full',
+                    absent: 'bg-red-500/20 text-red-800 rounded-full line-through',
                 }}
                 className="rounded-md border p-3"
-                // TODO: Limit display to current month or add navigation?
               />
           </CardContent>
        </Card>
@@ -293,18 +277,15 @@ export default function AttendancePage() {
     <>
       <Card className="transform transition-transform duration-300 hover:shadow-lg">
         <CardHeader>
-          <CardTitle>Class Attendance: {MOCK_CLASS_ID}</CardTitle> {/* TODO: Make dynamic */}
+          <CardTitle>Class Attendance: {MOCK_CLASS_ID}</CardTitle>
           <CardDescription>Real-time view and management for your class.</CardDescription>
-           {/* TODO: Add Date/Student Filters here */}
            <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={!attendanceData.length}>
                     <Download className="mr-1 h-4 w-4" /> Export CSV
                 </Button>
-                {/* Add other faculty actions */}
            </div>
         </CardHeader>
         <CardContent>
-           {/* TODO: Add attendance heatmap or chart here */}
            {renderDetailedTable(attendanceData, true)}
         </CardContent>
       </Card>
@@ -317,16 +298,13 @@ export default function AttendancePage() {
         <CardHeader>
           <CardTitle>Global Attendance Overview</CardTitle>
           <CardDescription>Manage and view attendance across the institution.</CardDescription>
-           {/* TODO: Add Date/Student/Class Filters here */}
            <div className="flex gap-2 pt-2">
                 <Button variant="outline" size="sm" onClick={handleDownloadCSV} disabled={!attendanceData.length}>
                     <Download className="mr-1 h-4 w-4" /> Export CSV
                 </Button>
-                 {/* TODO: Add Button for Manual Entry/Override */}
            </div>
         </CardHeader>
         <CardContent>
-          {/* TODO: Add Global Analytics (charts, KPIs) here */}
            {summary && (
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                    <SummaryBox label="Total Records" value={summary.totalDays} color="secondary" />
@@ -362,7 +340,7 @@ export default function AttendancePage() {
           </TableHeader>
           <TableBody>
             {data.length > 0 ? (
-              data.sort((a,b) => b.date.localeCompare(a.date)).map((record) => ( // Sort by date descending
+              data.sort((a,b) => b.date.localeCompare(a.date)).map((record) => (
                 <TableRow key={record.id}>
                    {showStudentName && <TableCell>{record.studentName || record.studentId}</TableCell>}
                   <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
@@ -379,7 +357,6 @@ export default function AttendancePage() {
                    <TableCell className="hidden md:table-cell text-muted-foreground">{record.remarks || '-'}</TableCell>
                     {userRole === 'admin' && (
                         <TableCell className="text-right">
-                            {/* TODO: Implement Admin Override Action */}
                             <Button variant="ghost" size="sm" >Override</Button>
                         </TableCell>
                     )}
@@ -410,7 +387,6 @@ export default function AttendancePage() {
        {userRole === 'faculty' && renderFacultyView()}
        {userRole === 'admin' && renderAdminView()}
 
-        {/* Fallback if role is null or unexpected */}
         {!isLoading && !userRole && (
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -428,12 +404,12 @@ export default function AttendancePage() {
 interface SummaryBoxProps {
     label: string;
     value: string | number;
-    color: 'primary' | 'secondary' | 'green' | 'red'; // Tailwind color prefixes
+    color: 'primary' | 'secondary' | 'green' | 'red';
 }
 function SummaryBox({ label, value, color }: SummaryBoxProps) {
     const colorClasses = {
         primary: 'bg-primary/10 text-primary',
-        secondary: 'bg-secondary/10 text-secondary',
+        secondary: 'bg-secondary/10 text-secondary-foreground', // Adjusted for better contrast with secondary
         green: 'bg-green-500/10 text-green-600',
         red: 'bg-red-500/10 text-red-600',
     };
@@ -444,3 +420,4 @@ function SummaryBox({ label, value, color }: SummaryBoxProps) {
         </div>
     );
 }
+
