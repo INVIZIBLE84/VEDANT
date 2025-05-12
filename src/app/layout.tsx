@@ -14,8 +14,8 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: "Cyber Sentinels VEDANT", 
-  description: "S.P.A.R.K. - System for Performance Analytics, Recognition & Kinetics",
+  title: "S.P.A.R.K.", 
+  description: "System for Performance Analytics, Recognition & Kinetics",
 };
 
 export default function RootLayout({
