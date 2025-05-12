@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion } from "lucide-react"; // Import specific icons
+import { Download, FileText, Upload, Search, Filter, Archive, Printer, History, FileUp, Loader2, AlertTriangle, Info, Check, X, FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion, CalendarClock, BookOpen } from "lucide-react"; // Import specific icons
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,10 +29,12 @@ const FileIconMap: Record<FileIconType, React.ReactNode> = {
     pdf: <FileType className="text-red-500" />,
     word: <FileType className="text-blue-500" />,
     excel: <FileSpreadsheet className="text-green-500" />,
-    powerpoint: <LucidePresentation className="text-orange-500" />, // Changed to LucidePresentation
+    powerpoint: <LucidePresentation className="text-orange-500" />,
     image: <ImageIcon className="text-purple-500" />,
     zip: <FileArchive className="text-yellow-600" />,
     text: <FileType className="text-gray-500" />,
+    schedule: <CalendarClock className="text-indigo-500" />, // New Icon
+    syllabus: <BookOpen className="text-cyan-500" />, // New Icon
     file: <FileQuestion className="text-muted-foreground" />, // Default
 };
 
@@ -178,6 +180,7 @@ export default function DocumentsPage() {
             subjectName: formData.get('subjectName') as string || undefined,
             course: formData.get('course') as string || undefined,
             semester: formData.get('semester') as string || undefined,
+            academicYear: formData.get('academicYear') as string || undefined,
             paperType: formData.get('paperType') as DocumentMetadata['paperType'] || undefined,
             examDate: formData.get('examDate') as string || undefined,
             tags: (formData.get('tags') as string)?.split(',').map(t => t.trim()).filter(t => t) || undefined,
@@ -356,7 +359,9 @@ export default function DocumentsPage() {
                     <SelectItem value="Application Form">Application Form</SelectItem>
                     <SelectItem value="Circular">Circular</SelectItem>
                     <SelectItem value="Letter">Letter</SelectItem>
-                     <SelectItem value="Schedule">Schedule</SelectItem>
+                    <SelectItem value="Schedule">Schedule</SelectItem>
+                    <SelectItem value="Timetable">Timetable</SelectItem>
+                    <SelectItem value="Syllabus">Syllabus</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>
             </Select>
@@ -410,7 +415,7 @@ export default function DocumentsPage() {
                     ) : documents.length > 0 ? (
                         documents.map((doc) => {
                             const statusStyle = getStatusBadgeVariant(doc.status);
-                            const iconType = getFileIconType(doc.fileMimeType);
+                            const iconType = getFileIconType(doc.fileMimeType, doc.type);
                             const canRequestPrint = (user?.role === 'faculty' || user?.role === 'admin') && !doc.isArchived && !['Approved for Print', 'Printing', 'Archived'].includes(doc.status);
                             const canDownload = (user?.role === 'admin' || user?.id === doc.uploadedBy.id || (user?.role === 'print_cell' && ['Approved for Print', 'Printing'].includes(doc.status)));
                             const canArchive = user?.role === 'admin';
@@ -426,7 +431,7 @@ export default function DocumentsPage() {
                                     <TableCell className="font-medium align-top">
                                         <span className="block">{doc.name}</span>
                                         <span className="text-xs text-muted-foreground block">
-                                            {doc.metadata.course}{doc.metadata.semester ? ` (${doc.metadata.semester})` : ''} | {formatBytes(doc.fileSize)} | v{doc.version}
+                                            {doc.metadata.course}{doc.metadata.semester ? ` (${doc.metadata.semester})` : ''}{doc.metadata.academicYear ? ` [${doc.metadata.academicYear}]` : ''} | {formatBytes(doc.fileSize)} | v{doc.version}
                                         </span>
                                         <span className="text-xs text-muted-foreground block">{doc.metadata.department}</span>
                                         {doc.metadata.tags && doc.metadata.tags.length > 0 && (
@@ -659,8 +664,10 @@ export default function DocumentsPage() {
                                              <SelectItem value="Notice">Notice</SelectItem>
                                              <SelectItem value="Application Form">Application Form</SelectItem>
                                              <SelectItem value="Circular">Circular</SelectItem>
-                                              <SelectItem value="Letter">Letter</SelectItem>
-                                               <SelectItem value="Schedule">Schedule</SelectItem>
+                                             <SelectItem value="Letter">Letter</SelectItem>
+                                             <SelectItem value="Schedule">Schedule</SelectItem>
+                                             <SelectItem value="Timetable">Timetable</SelectItem>
+                                             <SelectItem value="Syllabus">Syllabus</SelectItem>
                                              <SelectItem value="Other">Other</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -670,6 +677,7 @@ export default function DocumentsPage() {
                                      <div><Label htmlFor="subjectName">Subject Name</Label><Input id="subjectName" name="subjectName" /></div>
                                      <div><Label htmlFor="course">Course Code</Label><Input id="course" name="course" /></div>
                                      <div><Label htmlFor="semester">Semester</Label><Input id="semester" name="semester" /></div>
+                                     <div><Label htmlFor="academicYear">Academic Year</Label><Input id="academicYear" name="academicYear" placeholder="e.g., 2024-2025"/></div>
                                      <div><Label htmlFor="paperType">Paper Type</Label>
                                         <Select name="paperType">
                                              <SelectTrigger><SelectValue placeholder="Select if exam..." /></SelectTrigger>
@@ -772,3 +780,4 @@ export default function DocumentsPage() {
         </div>
     );
 }
+

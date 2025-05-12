@@ -1,11 +1,11 @@
 import type { UserRole } from "@/types/user";
 import { format } from 'date-fns';
-import { FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion } from 'lucide-react'; // Import specific icons
+import { FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion, CalendarClock, BookOpen } from 'lucide-react'; // Added CalendarClock, BookOpen
 
 /**
  * Types of documents managed by the system.
  */
-export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Schedule' | 'Other'; // Added 'Schedule'
+export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Schedule' | 'Timetable' | 'Syllabus' | 'Other'; // Added 'Timetable', 'Syllabus'
 
 /**
  * Status of a document within the system.
@@ -19,6 +19,7 @@ export interface DocumentMetadata {
   subjectName?: string;
   course?: string; // e.g., CS101
   semester?: string; // e.g., Fall 2024
+  academicYear?: string; // e.g., 2024-2025, useful for Timetable/Syllabus
   paperType?: 'Midterm' | 'Final' | 'Internal' | 'Quiz' | 'Assignment';
   examDate?: string; // ISO Date string
   department: string; // Owning department
@@ -70,6 +71,7 @@ export interface DocumentFilters {
     type?: DocumentType;
     department?: string;
     semester?: string;
+    academicYear?: string;
     status?: DocumentStatus;
     uploaderId?: string;
     isArchived?: boolean;
@@ -90,7 +92,7 @@ export interface AuditLogEntry {
 /**
  * Type for the string identifier returned by getFileIconType.
  */
-export type FileIconType = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'zip' | 'text' | 'file'; // Added new types
+export type FileIconType = 'pdf' | 'word' | 'excel' | 'powerpoint' | 'image' | 'zip' | 'text' | 'schedule' | 'syllabus' | 'file';
 
 
 // --- Mock Data (In-memory placeholder) ---
@@ -99,19 +101,19 @@ let sampleDocuments: Document[] = [
     {
         id: 'doc-exam-cs101-mid', name: 'CS101_Midterm_Fall24.pdf', type: 'Exam Paper',
         uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-07-20T10:00:00Z',
-        metadata: { department: 'Computer Science', subjectName: 'Intro to CS', course: 'CS101', semester: 'Fall 2024', paperType: 'Midterm', examDate: '2024-08-15' },
+        metadata: { department: 'Computer Science', subjectName: 'Intro to CS', course: 'CS101', semester: 'Fall 2024', paperType: 'Midterm', examDate: '2024-08-15', academicYear: '2024-2025' },
         status: 'Pending Approval', fileUrl: '/mock/CS101_Midterm_Fall24.pdf', fileSize: 150 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: false,
     },
     {
         id: 'doc-notice-holiday', name: 'Holiday Calendar 2024-25.pdf', type: 'Notice',
         uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-15T14:30:00Z',
-        metadata: { department: 'Administration' },
+        metadata: { department: 'Administration', academicYear: '2024-2025' },
         status: 'Uploaded', fileUrl: '/mock/Holiday_Calendar_2024-25.pdf', fileSize: 80 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: false,
     },
     {
         id: 'doc-exam-ph101-final', name: 'Physics101_Final_Spring24_v2.docx', type: 'Exam Paper',
         uploadedBy: { id: 'faculty-phys', name: 'Dr. Curie', role: 'faculty' }, uploadDate: '2024-05-10T09:00:00Z',
-        metadata: { department: 'Physics', subjectName: 'General Physics', course: 'PH101', semester: 'Spring 2024', paperType: 'Final', examDate: '2024-05-25' },
+        metadata: { department: 'Physics', subjectName: 'General Physics', course: 'PH101', semester: 'Spring 2024', paperType: 'Final', examDate: '2024-05-25', academicYear: '2023-2024' },
         status: 'Printed', fileUrl: '/mock/Physics101_Final_Spring24_v2.docx', fileSize: 220 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', version: 2, isArchived: false,
     },
      {
@@ -123,26 +125,38 @@ let sampleDocuments: Document[] = [
      {
         id: 'doc-exam-cs101-mid-old', name: 'CS101_Midterm_Spring24.pdf', type: 'Exam Paper',
         uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-03-10T10:00:00Z',
-        metadata: { department: 'Computer Science', subjectName: 'Intro to CS', course: 'CS101', semester: 'Spring 2024', paperType: 'Midterm' },
+        metadata: { department: 'Computer Science', subjectName: 'Intro to CS', course: 'CS101', semester: 'Spring 2024', paperType: 'Midterm', academicYear: '2023-2024' },
         status: 'Archived', fileUrl: '/mock/CS101_Midterm_Spring24.pdf', fileSize: 140 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: true,
     },
     {
-        id: 'doc-schedule-cs', name: 'CS_Dept_Fall24_Timetable.xlsx', type: 'Schedule',
+        id: 'doc-schedule-cs-old', name: 'CS_Dept_Fall24_Timetable_Old.xlsx', type: 'Schedule', // Kept 'Schedule' type for existing data
         uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-07-29T14:00:00Z',
-        metadata: { department: 'Computer Science', semester: 'Fall 2024', tags: ['timetable', 'schedule'] },
+        metadata: { department: 'Computer Science', semester: 'Fall 2024', tags: ['timetable', 'schedule'], academicYear: '2024-2025' },
         status: 'Uploaded', fileUrl: '/mock/CS_Dept_Fall24_Timetable.xlsx', fileSize: 45 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 1, isArchived: false,
     },
     {
         id: 'doc-logo', name: 'S.P.A.R.K._Logo.png', type: 'Other',
         uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-01T09:00:00Z',
         metadata: { department: 'Administration', tags: ['branding', 'logo'] },
-        status: 'Uploaded', fileUrl: '/mock/S.P.A.R.K._Logo.png', fileSize: 120 * 1024, fileMimeType: 'image/png', version: 1, isArchived: false,
+        status: 'Uploaded', fileUrl: '/S.P.A.R.K..svg', fileSize: 120 * 1024, fileMimeType: 'image/svg+xml', version: 1, isArchived: false,
     },
      {
         id: 'doc-project-archive', name: 'FinalYearProjects_2023.zip', type: 'Other',
         uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-06-15T16:00:00Z',
-        metadata: { department: 'Computer Science', semester: 'Spring 2024', tags: ['projects', 'archive'] },
+        metadata: { department: 'Computer Science', semester: 'Spring 2024', tags: ['projects', 'archive'], academicYear: '2023-2024' },
         status: 'Uploaded', fileUrl: '/mock/FinalYearProjects_2023.zip', fileSize: 15 * 1024 * 1024, fileMimeType: 'application/zip', version: 1, isArchived: false,
+    },
+    {
+        id: 'doc-timetable-sem1-2024', name: 'Semester1_Timetable_2024-2025.pdf', type: 'Timetable',
+        uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-08-01T10:00:00Z',
+        metadata: { department: 'Administration', academicYear: '2024-2025', semester: 'Semester 1', tags: ['timetable', 'academic'] },
+        status: 'Uploaded', fileUrl: '/mock/Semester1_Timetable_2024-2025.pdf', fileSize: 180 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: false,
+    },
+    {
+        id: 'doc-syllabus-cs101-2024', name: 'CS101_Syllabus_2024-2025.docx', type: 'Syllabus',
+        uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-08-02T11:00:00Z',
+        metadata: { department: 'Computer Science', course: 'CS101', academicYear: '2024-2025', tags: ['syllabus', 'curriculum'] },
+        status: 'Uploaded', fileUrl: '/mock/CS101_Syllabus_2024-2025.docx', fileSize: 95 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', version: 1, isArchived: false,
     },
 ];
 
@@ -174,9 +188,16 @@ let sampleAuditLogs: { [documentId: string]: AuditLogEntry[] } = {
          { timestamp: '2024-07-20T10:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
          { timestamp: '2024-07-21T09:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Print Requested', details: '60 copies, A4' },
     ],
-    'doc-schedule-cs': [
+    'doc-schedule-cs-old': [ // Changed ID to match sampleDocuments
         { timestamp: '2024-07-29T14:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
         { timestamp: '2024-07-30T10:00:00Z', userId: 'student123', userName: 'Alice Smith', action: 'Viewed' },
+    ],
+    'doc-timetable-sem1-2024': [
+        { timestamp: '2024-08-01T10:00:00Z', userId: 'admin001', userName: 'Admin User', action: 'Uploaded', details: 'Version 1' },
+        { timestamp: '2024-08-01T10:05:00Z', userId: 'student123', userName: 'Alice Smith', action: 'Viewed' },
+    ],
+    'doc-syllabus-cs101-2024': [
+        { timestamp: '2024-08-02T11:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
     ],
 };
 
@@ -243,8 +264,8 @@ export async function getDocuments(filters?: DocumentFilters, userRole?: UserRol
 
     // --- Permission Simulation (Basic) ---
     if (userRole === 'student') {
-         // Students can see Notices, Circulars, Schedules, Application Forms, and 'Other' non-sensitive types.
-         const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Application Form', 'Other'];
+         // Students can see Notices, Circulars, Schedules, Timetables, Syllabi, Application Forms, and 'Other' non-sensitive types.
+         const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Timetable', 'Syllabus', 'Application Form', 'Other'];
          results = results.filter(doc => allowedTypes.includes(doc.type) && !doc.isArchived);
          // Students cannot see Exam Papers or Letters unless explicitly shared (not implemented here)
          results = results.filter(doc => doc.type !== 'Exam Paper' && doc.type !== 'Letter');
@@ -281,6 +302,9 @@ export async function getDocuments(filters?: DocumentFilters, userRole?: UserRol
     }
     if (filters?.semester) {
         results = results.filter(doc => doc.metadata.semester === filters.semester);
+    }
+    if (filters?.academicYear) {
+        results = results.filter(doc => doc.metadata.academicYear === filters.academicYear);
     }
     if (filters?.status && filters.status !== 'all' as any) { // Check against 'all' string
         results = results.filter(doc => doc.status === filters.status);
@@ -321,7 +345,7 @@ export async function getDocumentById(documentId: string, userId: string, userRo
 
     // Basic permission simulation
      if (userRole === 'student') {
-        const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Application Form', 'Other'];
+        const allowedTypes: DocumentType[] = ['Notice', 'Circular', 'Schedule', 'Timetable', 'Syllabus', 'Application Form', 'Other'];
          if (!allowedTypes.includes(document.type) || document.isArchived) {
               console.warn(`Access denied for student ${userId} to view document ${documentId}`);
               return null;
@@ -465,11 +489,13 @@ export async function getPrintRequests(filters?: Partial<PrintRequest>, userRole
      // --- Permission Simulation ---
      if (userRole === 'faculty') {
         // Faculty sees only their requests
-         const currentUserId = (await getCurrentUser())?.id; // Assume getCurrentUser exists
+         // const currentUserId = (await getCurrentUser())?.id; // Assume getCurrentUser exists
+         // For mock, let's filter by a known faculty ID
+         const currentUserId = 'faculty999';
          results = results.filter(pr => pr.requestedBy.id === currentUserId);
      } else if (userRole === 'print_cell') {
          // Print cell sees 'Approved' or 'Printed' requests
-         results = results.filter(pr => ['Approved', 'Printed'].includes(pr.status));
+         results = results.filter(pr => ['Approved', 'Printed', 'Printing'].includes(pr.status)); // Added Printing
      } else if (userRole === 'student') {
         // Students shouldn't see print requests
         results = [];
@@ -637,19 +663,23 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
  * Returns a string identifier representing the file type icon.
  * Use this identifier in the frontend to map to actual icon components (e.g., Lucide icons).
  * @param mimeType The MIME type of the file. Can be undefined.
- * @returns A string identifier ('pdf', 'word', 'excel', 'powerpoint', 'image', 'zip', 'text', 'file').
+ * @param docType The DocumentType of the file. Can be undefined.
+ * @returns A string identifier ('pdf', 'word', 'excel', 'powerpoint', 'image', 'zip', 'text', 'schedule', 'syllabus', 'file').
  */
-export const getFileIconType = (mimeType?: string): FileIconType => {
+export const getFileIconType = (mimeType?: string, docType?: DocumentType): FileIconType => {
+    if (docType === 'Schedule' || docType === 'Timetable') return 'schedule';
+    if (docType === 'Syllabus') return 'syllabus';
+
     if (!mimeType) return 'file'; // Default if MIME type is unknown
 
     const lowerMime = mimeType.toLowerCase();
 
     if (lowerMime.includes('pdf')) return 'pdf';
-    if (lowerMime.includes('word')) return 'word'; // .doc, .docx
-    if (lowerMime.includes('spreadsheet') || lowerMime.includes('excel')) return 'excel'; // .xls, .xlsx
-    if (lowerMime.includes('presentation') || lowerMime.includes('powerpoint')) return 'powerpoint'; // .ppt, .pptx
+    if (lowerMime.includes('word') || lowerMime.includes('vnd.openxmlformats-officedocument.wordprocessingml')) return 'word'; // .doc, .docx
+    if (lowerMime.includes('spreadsheet') || lowerMime.includes('excel') || lowerMime.includes('vnd.openxmlformats-officedocument.spreadsheetml')) return 'excel'; // .xls, .xlsx
+    if (lowerMime.includes('presentation') || lowerMime.includes('powerpoint') || lowerMime.includes('vnd.openxmlformats-officedocument.presentationml')) return 'powerpoint'; // .ppt, .pptx
     if (lowerMime.startsWith('image/')) return 'image'; // .png, .jpg, .gif, etc.
-    if (lowerMime.includes('zip') || lowerMime.includes('compressed')) return 'zip'; // .zip, .rar, .7z etc.
+    if (lowerMime.includes('zip') || lowerMime.includes('compressed') || lowerMime.includes('x-rar-compressed')) return 'zip'; // .zip, .rar, .7z etc.
     if (lowerMime.startsWith('text/')) return 'text'; // .txt, .csv, .log etc.
 
     return 'file'; // Default file icon type
@@ -670,3 +700,12 @@ export const getStatusBadgeVariant = (status: DocumentStatus | PrintRequest['sta
     default: return { variant: 'outline', className: '' };
   }
 };
+
+// Helper to get current user (simplified, replace with actual auth context if available)
+async function getCurrentUser(): Promise<{ id: string; role: UserRole } | null> {
+    // This is a placeholder. In a real app, you'd get this from your authentication system.
+    // For mock purposes, let's assume a faculty user.
+    // You might need to pass the actual user object or role to functions needing it.
+    // For service functions, it's better if the calling component passes necessary user info.
+    return { id: 'faculty999', role: 'faculty' };
+}
