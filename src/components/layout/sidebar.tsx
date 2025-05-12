@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -15,7 +14,7 @@ import {
   SidebarFooter,
   SidebarTrigger, // Keep for consistency if needed elsewhere, though header has one
 } from "@/components/ui/sidebar";
-import { BarChart3, DollarSign, CheckCircle, FileText, User as UserIcon, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing as BellRingIcon, Activity, BarChartBig } from "lucide-react"; // Renamed User to UserIcon, BellRing to BellRingIcon
+import { BarChart3, DollarSign, CheckCircle, FileText, User as UserIcon, Settings, LayoutDashboard, LogOut, Bell, CalendarClock, ShieldCheck, DatabaseZap, BellRing as BellRingIconLucide, Activity, BarChartBig } from "lucide-react"; // Renamed User to UserIcon, BellRing to BellRingIconLucide
 import { cn } from "@/lib/utils";
 import { UserRole, getCurrentUser, logoutUser, AuthUser } from "@/types/user"; // Import UserRole, fetch function, and logoutUser
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
@@ -55,7 +54,7 @@ const navItems: NavItem[] = [
   { href: "/admin/analytics", label: "Analytics", icon: <BarChartBig />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/logs", label: "Logs", icon: <Activity />, roles: ["admin"], isAdminSection: true },
   { href: "/admin/backups", label: "Backups", icon: <DatabaseZap />, roles: ["admin"], isAdminSection: true },
-  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRingIcon />, roles: ["admin"], isAdminSection: true },
+  { href: "/admin/broadcasts", label: "Broadcasts", icon: <BellRingIconLucide />, roles: ["admin"], isAdminSection: true },
 ];
 
 export function AppSidebar() {
@@ -155,11 +154,12 @@ export function AppSidebar() {
                 src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
                 data-ai-hint="ai education logo"
-                width={350} 
-                height={87.5}
+                width={150} 
+                height={37.5} // Adjusted height to maintain aspect ratio for 150 width
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
+             {/* Removed the S.P.A.R.K. text span here */}
          </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
@@ -222,4 +222,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
