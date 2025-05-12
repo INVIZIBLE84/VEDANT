@@ -93,11 +93,11 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/S.P.A.R.K..svg" 
-             alt="S.P.A.R.K. Logo" 
-             data-ai-hint="ai education logo"
-             width={150} 
-             height={37.5} 
+             src="/Vedant.png" 
+             alt="Cyber Sentinels VEDANT Logo" 
+             data-ai-hint="cyber logo"
+             width={220} 
+             height={55} 
              className="mx-auto mb-4 h-auto text-primary"
              priority
            />

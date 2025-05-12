@@ -14,7 +14,7 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: "S.P.A.R.K.", // Ensured "CampusConnect" is removed
+  title: "Cyber Sentinels VEDANT", 
   description: "S.P.A.R.K. - System for Performance Analytics, Recognition & Kinetics",
 };
 
@@ -24,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning> {/* Added suppressHydrationWarning for theme switching etc. */}
+      <body className={`${inter.variable} font-sans antialiased`}> {/* Ensured font-sans class is applied */}
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>

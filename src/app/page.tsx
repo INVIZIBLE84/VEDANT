@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -71,7 +72,7 @@ export default function RootRedirectPage() {
   // It will also show briefly if the redirect to /login happens.
    return (
      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-       <h1 className="text-2xl font-bold text-primary mb-4">Welcome to S.P.A.R.K.</h1>
+       <h1 className="text-2xl font-bold text-primary mb-4">Welcome to Cyber Sentinels VEDANT</h1>
        <p className="text-muted-foreground">Redirecting to login...</p>
        {/* Login button might not be needed here if redirect is reliable */}
        {/* <Link href="/login"><Button>Login</Button></Link> */}
