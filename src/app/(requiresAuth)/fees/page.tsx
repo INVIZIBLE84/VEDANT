@@ -221,7 +221,8 @@ export default function FeesPage() {
             if (link.download !== undefined) {
                 const url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", `fee_data_export_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+                const timestamp = format(new Date(), 'yyyyMMdd_HHmmss');
+                link.setAttribute("download", `fee_data_export_${timestamp}.csv`);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
