@@ -1,3 +1,4 @@
+
 /**
  * Represents a single item within the fee breakdown.
  */
@@ -174,10 +175,97 @@ export async function addFeePayment(studentId: string, payment: Omit<FeePayment,
     return { success: true, message: "Payment added successfully.", payment: newPayment };
 }
 
+/**
+ * Simulates importing fee data from a file (CSV/XLSX).
+ * In a real app, this would involve file parsing and robust error handling.
+ * @param file The file object to import.
+ * @param adminId The ID of the admin performing the import.
+ * @returns Promise indicating success, with counts of imported/skipped records.
+ */
+export async function importFeeDataFromFile(file: File, adminId: string): Promise<{ success: boolean; message: string; importedCount?: number; skippedCount?: number }> {
+    console.log(`Admin ${adminId} importing fee data from file: ${file.name}`);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate file processing
+
+    // Mock file parsing and data processing
+    // For demonstration, let's assume the file contains a few records
+    // and we'll update/add them to our mock data.
+    // A real implementation would use a library like papaparse for CSV or xlsx for Excel files.
+
+    let importedCount = 0;
+    let skippedCount = 0;
+
+    // Example: Simulate parsing 3 records from the file
+    const mockFileRecords = [
+        { studentId: 'student123', tuition: 1800, library: 100, exam: 100, paid: 2000, paymentDate: '2024-08-01', paymentMethod: 'File Import' },
+        { studentId: 'student456', tuition: 1800, lab: 250, sports: 100, paid: 1500, paymentDate: '2024-08-02', paymentMethod: 'File Import' },
+        { studentId: 'newStudent001', tuition: 1900, library: 50, exam: 50, paid: 0, paymentDate: '', paymentMethod: '' }, // New student, no payment yet
+        { studentId: 'errorStudent', tuition: 'invalid', paid: 500 }, // Example of a record that might be skipped
+    ];
+
+    for (const record of mockFileRecords) {
+        if (!record.studentId || typeof record.tuition !== 'number') {
+            skippedCount++;
+            continue;
+        }
+
+        let studentFeeDetail = sampleFeeDetailsData.find(fd => fd.studentId === record.studentId);
+        const breakdown: FeeBreakdownItem[] = [];
+        if (record.tuition) breakdown.push({ description: 'Tuition Fee', amount: record.tuition });
+        if (record.library) breakdown.push({ description: 'Library Fee', amount: record.library });
+        if (record.exam) breakdown.push({ description: 'Exam Fee', amount: record.exam });
+        if (record.lab) breakdown.push({ description: 'Lab Fee', amount: record.lab });
+        if (record.sports) breakdown.push({ description: 'Sports Fee', amount: record.sports });
+        
+        const totalDueFromFile = breakdown.reduce((sum, item) => sum + item.amount, 0);
+
+        if (studentFeeDetail) {
+            // Update existing student's fee details
+            studentFeeDetail.breakdown = breakdown; // Overwrite breakdown for simplicity
+            studentFeeDetail.dueDate = studentFeeDetail.dueDate || new Date(new Date().getFullYear(), 7, 15).toISOString().split('T')[0]; // Default due date if not set
+        } else {
+            // Add new student's fee details
+            studentFeeDetail = {
+                studentId: record.studentId,
+                totalDue: 0, // Will be recalculated
+                dueDate: new Date(new Date().getFullYear(), 7, 15).toISOString().split('T')[0], // Default due date
+                breakdown: breakdown,
+            };
+            sampleFeeDetailsData.push(studentFeeDetail);
+        }
+
+        // Add payment if provided
+        if (record.paid > 0 && record.paymentDate && record.paymentMethod) {
+            if (!sampleFeePaymentsData[record.studentId]) {
+                sampleFeePaymentsData[record.studentId] = [];
+            }
+            sampleFeePaymentsData[record.studentId].push({
+                id: `pay-import-${Date.now()}-${importedCount}`,
+                paymentDate: record.paymentDate,
+                amount: record.paid,
+                method: record.paymentMethod,
+                recordedBy: adminId,
+            });
+        }
+        importedCount++;
+    }
+
+    // Log this admin action - In a real app, use a centralized audit logger
+    // logAdminAudit(adminId, 'Admin User', 'Fee Data Imported', `Imported ${importedCount} records, skipped ${skippedCount} from file ${file.name}`);
+
+
+    if (importedCount > 0) {
+        return { success: true, message: `Successfully imported ${importedCount} fee records. ${skippedCount} records were skipped due to errors.`, importedCount, skippedCount };
+    } else if (skippedCount > 0) {
+        return { success: false, message: `Import failed. All ${skippedCount} records had errors. Please check the file format.`, importedCount, skippedCount };
+    } else {
+        return { success: false, message: "No valid records found in the file to import.", importedCount, skippedCount };
+    }
+}
+
 
 // --- Sample Data (In-memory placeholder) ---
 
-const sampleFeeDetailsData: Omit<FeeDetails, 'totalPaid' | 'balanceDue' | 'status'>[] = [
+let sampleFeeDetailsData: Omit<FeeDetails, 'totalPaid' | 'balanceDue' | 'status'>[] = [
   {
     studentId: 'student123', // Alice Smith
     totalDue: 2000, // This will be calculated from breakdown
@@ -210,7 +298,7 @@ const sampleFeeDetailsData: Omit<FeeDetails, 'totalPaid' | 'balanceDue' | 'statu
   },
 ];
 
-const sampleFeePaymentsData: { [studentId: string]: FeePayment[] } = {
+let sampleFeePaymentsData: { [studentId: string]: FeePayment[] } = {
   'student123': [
     { id: 'pay1', paymentDate: '2024-07-10', amount: 1000, method: 'Online', transactionId: 'txn_abc123' },
     { id: 'pay2', paymentDate: '2024-07-25', amount: 1000, method: 'Bank Transfer', transactionId: 'txn_def456' }, // Paid in full
@@ -220,3 +308,4 @@ const sampleFeePaymentsData: { [studentId: string]: FeePayment[] } = {
   ],
   // student789 has no payments yet
 };
+

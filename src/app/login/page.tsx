@@ -95,7 +95,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
           <Image
-            src="https://picsum.photos/seed/cybersentinels_login/300/75"
+            src="/Vedant.png"
             alt="Cyber Sentinels VEDANT Logo"
             data-ai-hint="cyber logo"
             width={300} 

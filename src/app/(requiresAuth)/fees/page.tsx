@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, PlusCircle, Edit, Loader2, Search, Filter } from "lucide-react";
+import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, PlusCircle, Edit, Loader2, Search, Filter, Upload } from "lucide-react"; // Added Upload
 import {
     getFeeDetails,
     getFeePayments,
     getAllFeeDetails, // For admin
     addFeePayment, // For admin
-    // updateFeeStatus, // Less common, status usually derived
+    importFeeDataFromFile, // New import function
     type FeeDetails,
     type FeePayment,
     type FeeBreakdownItem,
@@ -45,6 +45,7 @@ export default function FeesPage() {
   const [isAddingPayment, setIsAddingPayment] = useState(false);
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<string | null>(null);
   const [showAddPaymentDialog, setShowAddPaymentDialog] = React.useState(false); // Control dialog
+  const [isImportingFees, setIsImportingFees] = React.useState(false);
 
 
   useEffect(() => {
@@ -172,6 +173,41 @@ export default function FeesPage() {
         }
    };
 
+   const handleFeeDataImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (!user || user.role !== 'admin') return;
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setIsImportingFees(true);
+        try {
+            const result = await importFeeDataFromFile(file, user.id);
+            if (result.success) {
+                toast({
+                    title: "Import Successful",
+                    description: result.message,
+                });
+                // Refresh the list of all fee details
+                const updatedDetails = await getAllFeeDetails(filters);
+                setAllFeeDetails(updatedDetails);
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Import Failed",
+                    description: result.message,
+                });
+            }
+        } catch (err: any) {
+            console.error("Error importing fee data:", err);
+            toast({
+                variant: "destructive",
+                title: "Import Error",
+                description: err.message || "An unexpected error occurred during import.",
+            });
+        } finally {
+            setIsImportingFees(false);
+            event.target.value = ''; // Reset file input to allow re-upload of same file
+        }
+    };
 
 
   // --- Loading / Error States ---
@@ -332,8 +368,8 @@ export default function FeesPage() {
         <CardHeader>
             <CardTitle>Fee Management Dashboard</CardTitle>
             <CardDescription>View and manage student fee records.</CardDescription>
-             {/* Filters */}
-             <div className="flex flex-wrap gap-2 pt-4">
+             {/* Filters & Actions */}
+             <div className="flex flex-wrap items-center gap-2 pt-4">
                  <div className="relative flex-grow max-w-xs">
                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -356,8 +392,14 @@ export default function FeesPage() {
                          <SelectItem value="Partially Paid">Partially Paid</SelectItem>
                      </SelectContent>
                  </Select>
-                 {/* Add Department Filter if needed */}
                  <Button variant="outline" onClick={() => setFilters({})}>Clear Filters</Button>
+                 <Button variant="outline" asChild disabled={isImportingFees}>
+                    <Label htmlFor="import-fee-data" className="cursor-pointer">
+                        {isImportingFees ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                        Import Fee Data
+                        <input id="import-fee-data" type="file" className="sr-only" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFeeDataImport} />
+                    </Label>
+                 </Button>
              </div>
         </CardHeader>
         <CardContent>
@@ -541,3 +583,4 @@ function FeeSkeleton() {
          </div>
     );
 }
+

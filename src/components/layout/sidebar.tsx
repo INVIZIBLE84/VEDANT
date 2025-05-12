@@ -152,7 +152,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex items-center justify-center p-4">
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="https://picsum.photos/seed/cybersentinels_sidebar/300/75"
+                src="/Vedant.png"
                 alt="Cyber Sentinels VEDANT Logo"
                 data-ai-hint="cyber logo"
                 width={220} // Adjusted for sidebar

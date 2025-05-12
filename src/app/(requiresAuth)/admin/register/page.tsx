@@ -93,7 +93,7 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/S.P.A.R.K..svg"
+             src="/Vedant.png"
              alt="S.P.A.R.K. Logo"
              width={300}
              height={75}
