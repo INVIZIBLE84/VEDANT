@@ -1,10 +1,10 @@
 "use client";
 
-import * as React from "react"; // Import React for hooks
-import { useRouter } from 'next/navigation'; // Import useRouter for redirection
+import * as React from "react";
+import { useRouter, usePathname } from 'next/navigation'; // Import usePathname
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,23 +13,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button"; // Import Button
-import { LogOut, Settings, User, Bell } from "lucide-react"; // Added Bell
+import { Button } from "@/components/ui/button";
+import { LogOut, Settings, User, Bell } from "lucide-react";
 import Link from "next/link";
-import { AuthUser, getCurrentUser, logoutUser } from "@/types/user"; // Import types, fetch function, and logoutUser
-import { getUnreadNotificationCount } from "@/services/notifications"; // Import notification service
-import { Badge } from "@/components/ui/badge"; // Import Badge
-import { useToast } from "@/hooks/use-toast"; // Import useToast
+import { AuthUser, getCurrentUser, logoutUser } from "@/types/user";
+import { getUnreadNotificationCount } from "@/services/notifications";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 
 export function Header() {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [unreadCount, setUnreadCount] = React.useState(0);
   const [isLoading, setIsLoading] = React.useState(true);
-  const router = useRouter(); // Hook for navigation
-  const { toast } = useToast(); // Hook for showing toasts
+  const router = useRouter();
+  const pathname = usePathname(); // Get current pathname
+  const { toast } = useToast();
 
-   // Fetch user data and notification count on mount
+
    React.useEffect(() => {
      const fetchData = async () => {
        setIsLoading(true);
@@ -41,29 +42,28 @@ export function Header() {
                setUnreadCount(count);
            } catch (error) {
                console.error("Error fetching notification count:", error);
-               // Handle error silently or show toast
            }
        }
        setIsLoading(false);
      };
      fetchData();
-   }, []); // Refetch if user changes? Add user dependency if login/logout is instant
+   }, [pathname]); // Add pathname to dependency array
 
   const getInitials = (name: string | undefined) => {
      return name ? name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
   }
 
   const handleLogout = async () => {
-      setIsLoading(true); // Show loading state
+      setIsLoading(true);
       try {
-          await logoutUser(); // Call the simulated logout function
-          setUser(null); // Clear local user state
-          setUnreadCount(0); // Reset notification count
+          await logoutUser();
+          setUser(null);
+          setUnreadCount(0);
           toast({
               title: "Logged Out",
               description: "You have been successfully logged out.",
           });
-          router.push('/login'); // Redirect to login page
+          router.push('/login');
       } catch (error) {
            console.error("Logout error:", error);
            toast({
@@ -71,9 +71,8 @@ export function Header() {
                title: "Logout Failed",
                description: "Could not log you out. Please try again.",
            });
-           setIsLoading(false); // Hide loading state on error
+           setIsLoading(false);
       }
-      // setIsLoading(false) will be implicitly handled by navigation
   };
 
 
@@ -81,13 +80,7 @@ export function Header() {
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <SidebarTrigger className="md:hidden" />
 
-      <div className="flex w-full items-center justify-end gap-4"> {/* Updated to justify-end and added gap */}
-        {/* App Title (optional, can be in sidebar) - Removed for cleaner header */}
-         {/* <Link href="/" className="hidden md:block">
-            <h1 className="text-xl font-semibold text-primary">CampusConnect</h1>
-         </Link> */}
-
-         {/* Notification Bell */}
+      <div className="flex w-full items-center justify-end gap-4">
          {user && (
             <Button variant="ghost" size="icon" asChild>
                  <Link href="/notifications" className="relative">
@@ -102,15 +95,13 @@ export function Header() {
              </Button>
          )}
 
-
-        {/* User Menu */}
-        {isLoading && !user ? ( // Show skeleton only if loading AND no user yet
-             <Skeleton className="h-9 w-9 rounded-full" /> // Skeleton loader for avatar
+        {isLoading && !user ? (
+             <Skeleton className="h-9 w-9 rounded-full" />
         ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Avatar className="h-9 w-9 cursor-pointer border-2 border-transparent hover:border-primary transition-colors">
-                  <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="user profile picture"/>
+                  <AvatarImage src={user.avatarUrl || `https://picsum.photos/seed/${user.id}/100/100`} alt={user.name} data-ai-hint="user profile picture"/>
                   <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -127,9 +118,8 @@ export function Header() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
-                 {user.role === 'admin' && ( // Only show settings for admin
+                 {user.role === 'admin' && (
                     <DropdownMenuItem asChild>
-                    {/* Link to the new admin modules page */}
                     <Link href="/admin/modules" className="cursor-pointer">
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Settings</span>
@@ -137,10 +127,9 @@ export function Header() {
                     </DropdownMenuItem>
                  )}
                 <DropdownMenuSeparator />
-                {/* Implement Logout */}
                 <DropdownMenuItem
                    onClick={handleLogout}
-                   disabled={isLoading}
+                   disabled={isLoading} // Use isLoading state for logout operation as well
                    className="cursor-pointer text-destructive focus:text-destructive-foreground focus:bg-destructive"
                  >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -149,7 +138,7 @@ export function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
         ) : (
-            // Show Login button if not loading and no user
+            // This part is reached when !isLoading and !user
             <Link href="/login">
                 <Button variant="outline" size="sm">Login</Button>
             </Link>
