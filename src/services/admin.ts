@@ -9,6 +9,7 @@ export interface AdminUserFilters {
     status?: 'active' | 'locked';
     department?: string;
     searchQuery?: string;
+    studentId?: string; // Added to support fetching a single user by studentId more directly
 }
 
 export interface UserUpdateData extends Omit<Partial<UserProfile>, 'id' | 'role' | 'isAuthenticated' | 'avatarUrl'> {
@@ -21,6 +22,11 @@ export async function getUsers(filters?: AdminUserFilters): Promise<AuthUser[]> 
     await new Promise(res => setTimeout(res, 200)); // Simulate API call
 
     let results = [...mockUsers]; // Use a copy of the mock data
+
+    if (filters?.studentId) {
+        results = results.filter(u => u.studentId === filters.studentId || u.id === filters.studentId);
+        return results; // Return early if fetching by specific ID
+    }
 
     if (filters?.searchQuery) {
         const query = filters.searchQuery.toLowerCase();
@@ -45,6 +51,15 @@ export async function getUsers(filters?: AdminUserFilters): Promise<AuthUser[]> 
     return results.sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/** Simulates fetching a single user by their ID */
+export async function getUserById(userId: string): Promise<AuthUser | null> {
+    console.log("Admin fetching user by ID:", userId);
+    await new Promise(res => setTimeout(res, 50)); // Simulate API call
+    const user = mockUsers.find(u => u.id === userId || u.studentId === userId || u.facultyId === userId);
+    return user || null;
+}
+
+
 /** Simulates adding a new user */
 export async function addUser(userData: UserUpdateData & { password?: string }): Promise<{ success: boolean; message: string; user?: AuthUser }> {
     console.log("Admin adding user:", userData);
@@ -68,7 +83,7 @@ export async function addUser(userData: UserUpdateData & { password?: string }):
         facultyId: userData.facultyId,
         isAuthenticated: true, // Assume active on creation
         isLocked: false,
-         // avatarUrl: `https://picsum.photos/seed/${newId}/100/100`, // Generate avatar
+         avatarUrl: `https://picsum.photos/seed/${newId}/100/100`, // Generate avatar
         // Password would be hashed and stored securely on backend
     };
     mockUsers.push(newUser);
@@ -534,14 +549,14 @@ export async function deleteBroadcast(broadcastId: string): Promise<{ success: b
 // --- Mock Data ---
 
 let mockUsers: (AuthUser & { isLocked?: boolean })[] = [
-    { id: 'student123', name: 'Alice Smith', email: 'alice.smith@campusconnect.edu', role: 'student', studentId: 'S12345', department: 'Computer Science', isAuthenticated: true, isLocked: false },
-    { id: 'student456', name: 'Bob Johnson', email: 'bob.j@campusconnect.edu', role: 'student', studentId: 'S67890', department: 'Physics', isAuthenticated: true, isLocked: false },
-    { id: 'student789', name: 'Charlie Brown', email: 'charlie.b@campusconnect.edu', role: 'student', studentId: 'S11223', department: 'Mathematics', isAuthenticated: true, isLocked: true }, // Locked example
-    { id: 'faculty999', name: 'Dr. Alan Turing', email: 'alan.turing@campusconnect.edu', role: 'faculty', facultyId: 'F999', department: 'Computer Science', isAuthenticated: true, isLocked: false },
-    { id: 'faculty-phys', name: 'Dr. Marie Curie', email: 'marie.c@campusconnect.edu', role: 'faculty', facultyId: 'F101', department: 'Physics', isAuthenticated: true, isLocked: false },
-    { id: 'admin001', name: 'Admin User', email: 'admin@campusconnect.edu', role: 'admin', department: 'Administration', isAuthenticated: true, isLocked: false },
-    { id: 'printcell007', name: 'Print Operator', email: 'print.cell@campusconnect.edu', role: 'print_cell', department: 'Printing Services', isAuthenticated: true, isLocked: false },
-    { id: 'clearance01', name: 'Clearance Officer Lib', email: 'library.clear@campusconnect.edu', role: 'clearance_officer', department: 'Library', isAuthenticated: true, isLocked: false }, // Example clearance officer role
+    { id: 'student123', name: 'Alice Smith', email: 'alice.smith@campusconnect.edu', role: 'student', studentId: 'S12345', department: 'Computer Science', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/student123/100/100` },
+    { id: 'student456', name: 'Bob Johnson', email: 'bob.j@campusconnect.edu', role: 'student', studentId: 'S67890', department: 'Physics', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/student456/100/100` },
+    { id: 'student789', name: 'Charlie Brown', email: 'charlie.b@campusconnect.edu', role: 'student', studentId: 'S11223', department: 'Mathematics', isAuthenticated: true, isLocked: true, avatarUrl: `https://picsum.photos/seed/student789/100/100` }, // Locked example
+    { id: 'faculty999', name: 'Dr. Alan Turing', email: 'alan.turing@campusconnect.edu', role: 'faculty', facultyId: 'F999', department: 'Computer Science', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/faculty999/100/100` },
+    { id: 'faculty-phys', name: 'Dr. Marie Curie', email: 'marie.c@campusconnect.edu', role: 'faculty', facultyId: 'F101', department: 'Physics', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/faculty-phys/100/100` },
+    { id: 'admin001', name: 'Admin User', email: 'admin@campusconnect.edu', role: 'admin', department: 'Administration', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/admin001/100/100` },
+    { id: 'printcell007', name: 'Print Operator', email: 'print.cell@campusconnect.edu', role: 'print_cell', department: 'Printing Services', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/printcell007/100/100` },
+    { id: 'clearance01', name: 'Clearance Officer Lib', email: 'library.clear@campusconnect.edu', role: 'clearance_officer', department: 'Library', isAuthenticated: true, isLocked: false, avatarUrl: `https://picsum.photos/seed/clearance01/100/100` }, // Example clearance officer role
 ];
 
 let mockRoles: Role[] = [
@@ -599,3 +614,5 @@ function logAdminAudit(userId: string, userName: string, action: string, details
         ipAddress: '127.0.0.1', // Simulate local admin action
     });
 }
+
+    

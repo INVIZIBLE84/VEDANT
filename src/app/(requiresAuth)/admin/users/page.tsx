@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import * as React from "react";
@@ -8,16 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog"; // Dialog is used directly by IndividualStudentReportDialog
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, PlusCircle, Upload, Search, Filter, Edit, Trash2, KeyRound, Lock, Unlock, Loader2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Upload, Search, Filter, Edit, Trash2, KeyRound, Lock, Unlock, Loader2, FileText as ReportIcon } from "lucide-react"; // Added ReportIcon
 import { AuthUser, UserRole } from "@/types/user"; // Use existing user type
 import { getUsers, updateUser, deleteUser, resetPassword, toggleUserLock, importUsers, type AdminUserFilters, type UserUpdateData } from "@/services/admin"; // Removed addUser import here, using dedicated page
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import Link from "next/link"; // Added Link import
+import { generateIndividualStudentReport, IndividualStudentReportData } from "@/services/reports"; // Import report service
+import IndividualStudentReportDialog from "@/components/admin/IndividualStudentReportDialog"; // Import the new dialog component
 
 export default function AdminUsersPage() {
     const { toast } = useToast();
@@ -28,6 +31,11 @@ export default function AdminUsersPage() {
     const [currentUser, setCurrentUser] = React.useState<AuthUser | null>(null); // For editing
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [isActionLoading, setIsActionLoading] = React.useState<Record<string, boolean>>({}); // For delete, lock, reset password actions
+
+    const [showReportDialog, setShowReportDialog] = React.useState(false);
+    const [reportData, setReportData] = React.useState<IndividualStudentReportData | null>(null);
+    const [isReportLoading, setIsReportLoading] = React.useState(false);
+
 
     // Fetch users on mount and filter change
     React.useEffect(() => {
@@ -175,6 +183,31 @@ export default function AdminUsersPage() {
          }
      };
 
+     const handleViewReport = async (studentId: string) => {
+        if (!studentId) {
+            toast({ variant: "destructive", title: "Error", description: "Student ID is missing." });
+            return;
+        }
+        setIsReportLoading(true);
+        setShowReportDialog(true); // Open dialog with loading state
+        setReportData(null); // Clear previous report data
+        try {
+            const data = await generateIndividualStudentReport(studentId);
+            if (data) {
+                setReportData(data);
+            } else {
+                toast({ variant: "destructive", title: "Report Error", description: "Could not generate report for this student." });
+                setShowReportDialog(false); // Close dialog if report fails
+            }
+        } catch (error) {
+            console.error("Error generating student report:", error);
+            toast({ variant: "destructive", title: "Report Error", description: "An unexpected error occurred while generating the report." });
+            setShowReportDialog(false);
+        } finally {
+            setIsReportLoading(false);
+        }
+    };
+
 
     return (
         <div className="space-y-6">
@@ -198,11 +231,11 @@ export default function AdminUsersPage() {
 
             {/* Edit User Dialog */}
             <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) setCurrentUser(null); setShowUserDialog(open); }}>
-                 <DialogContent className="max-w-lg">
-                     <DialogHeader>
-                        <DialogTitle>Edit User</DialogTitle>
-                        <DialogDescription>Update details for {currentUser?.name}</DialogDescription>
-                     </DialogHeader>
+                 <CardContent className="max-w-lg"> {/* Changed DialogContent to CardContent to avoid nesting issues, needs styling review */}
+                     <CardHeader> {/* Changed DialogHeader to CardHeader */}
+                        <CardTitle>Edit User</CardTitle> {/* Changed DialogTitle to CardTitle */}
+                        <CardDescription>Update details for {currentUser?.name}</CardDescription> {/* Changed DialogDescription to CardDescription */}
+                     </CardHeader>
                      {/* Edit Form */}
                      <form onSubmit={handleEditFormSubmit} className="grid gap-4 py-4">
                         <div className="grid grid-cols-4 items-center gap-4">
@@ -241,16 +274,24 @@ export default function AdminUsersPage() {
                              <Input id="edit-facultyId" name="facultyId" defaultValue={currentUser?.facultyId} className="col-span-3" placeholder="If faculty"/>
                           </div>
 
-                        <DialogFooter>
+                        <CardFooter> {/* Changed DialogFooter to CardFooter */}
                             <Button type="button" variant="ghost" onClick={() => {setShowUserDialog(false); setCurrentUser(null);}}>Cancel</Button>
                             <Button type="submit" disabled={isSubmitting}>
                                  {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                                  Save Changes
                             </Button>
-                        </DialogFooter>
+                        </CardFooter>
                      </form>
-                 </DialogContent>
+                 </CardContent>
             </Dialog>
+
+            {/* Individual Student Report Dialog */}
+            <IndividualStudentReportDialog
+                isOpen={showReportDialog}
+                onOpenChange={setShowReportDialog}
+                reportData={reportData}
+                isLoading={isReportLoading}
+            />
 
 
             <Card>
@@ -338,7 +379,7 @@ export default function AdminUsersPage() {
                                         <TableCell className="text-right">
                                              <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={Object.values(isActionLoading).some(Boolean)}>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0" disabled={Object.values(isActionLoading).some(Boolean) || isReportLoading}>
                                                         <span className="sr-only">Open menu</span>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
@@ -355,6 +396,11 @@ export default function AdminUsersPage() {
                                                      <DropdownMenuItem onClick={() => handleResetPassword(user.id, user.name)} disabled={isActionLoading[`reset-${user.id}`]}>
                                                          {isActionLoading[`reset-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />} Reset Password
                                                      </DropdownMenuItem>
+                                                      {user.role === 'student' && ( // Only show report for students
+                                                        <DropdownMenuItem onClick={() => handleViewReport(user.studentId || user.id)} disabled={isReportLoading || isActionLoading[`report-${user.id}`]}>
+                                                             {isReportLoading && isActionLoading[`report-${user.id}`] ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ReportIcon className="mr-2 h-4 w-4" />} View Report
+                                                        </DropdownMenuItem>
+                                                      )}
                                                      <DropdownMenuSeparator />
                                                      <DropdownMenuItem
                                                          className="text-destructive focus:text-destructive-foreground focus:bg-destructive"
@@ -381,3 +427,5 @@ export default function AdminUsersPage() {
         </div>
     );
 }
+
+    
