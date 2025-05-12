@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -25,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased`}> {/* Ensured font-sans class is applied */}
+      <body className={`${inter.variable} font-sans antialiased`}>
         <SidebarProvider>
           <AppSidebar />
           <SidebarInset>
@@ -38,3 +39,4 @@ export default function RootLayout({
     </html>
   );
 }
+
