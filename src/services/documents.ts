@@ -1,6 +1,6 @@
 import type { UserRole } from "@/types/user";
 import { format } from 'date-fns';
-import { FileType, FileSpreadsheet, FilePresentation, Image as ImageIcon, FileArchive, FileQuestion } from 'lucide-react'; // Import specific icons
+import { FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, FileQuestion } from 'lucide-react'; // Import specific icons
 
 /**
  * Types of documents managed by the system.
@@ -133,10 +133,10 @@ let sampleDocuments: Document[] = [
         status: 'Uploaded', fileUrl: '/mock/CS_Dept_Fall24_Timetable.xlsx', fileSize: 45 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 1, isArchived: false,
     },
     {
-        id: 'doc-logo', name: 'CampusConnect_Logo.png', type: 'Other',
+        id: 'doc-logo', name: 'S.P.A.R.K._Logo.png', type: 'Other',
         uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-01T09:00:00Z',
         metadata: { department: 'Administration', tags: ['branding', 'logo'] },
-        status: 'Uploaded', fileUrl: '/mock/CampusConnect_Logo.png', fileSize: 120 * 1024, fileMimeType: 'image/png', version: 1, isArchived: false,
+        status: 'Uploaded', fileUrl: '/mock/S.P.A.R.K._Logo.png', fileSize: 120 * 1024, fileMimeType: 'image/png', version: 1, isArchived: false,
     },
      {
         id: 'doc-project-archive', name: 'FinalYearProjects_2023.zip', type: 'Other',

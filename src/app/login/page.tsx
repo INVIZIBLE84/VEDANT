@@ -95,15 +95,15 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
           <Image
-            src="/Vedant.png"
-            alt="Cyber Sentinels VEDANT Logo"
-            data-ai-hint="cyber logo"
-            width={300} 
-            height={75} 
+            src="/S.P.A.R.K..svg"
+            alt="S.P.A.R.K. Logo"
+            data-ai-hint="ai education logo"
+            width={350} 
+            height={87.5} 
             className="mx-auto mb-4 h-auto"
             priority
           />
-          <CardTitle className="text-2xl font-bold text-primary">CampusConnect Login</CardTitle>
+          <CardTitle className="text-2xl font-bold text-primary">S.P.A.R.K. Login</CardTitle>
           <CardDescription>
             Enter your username and password to access your dashboard.
           </CardDescription>

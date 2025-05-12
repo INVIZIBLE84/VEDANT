@@ -34,7 +34,7 @@ export async function authenticateUser(
        const adminUser: AuthUser = {
            id: "admin001",
            name: "Test Admin",
-           email: "admin@campusconnect.edu", // Mock email
+           email: "admin@example.edu", // Mock email
            role: "admin",
            department: "Administration",
            isAuthenticated: true,
@@ -53,7 +53,7 @@ export async function authenticateUser(
      const user: AuthUser = {
        id: storedUser.id,
        name: storedUser.name,
-       email: `${username}@campusconnect.edu`, // Mock email
+       email: `${username}@example.edu`, // Mock email
        role: storedUser.role,
        department: storedUser.department,
        studentId: storedUser.studentId,

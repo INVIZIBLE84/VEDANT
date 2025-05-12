@@ -85,7 +85,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
             return {
                 id: MOCK_ID_MAP.student,
                 name: "Alice Smith",
-                email: "alice.smith@campusconnect.edu",
+                email: "alice.smith@example.edu",
                 role: "student",
                 studentId: "S12345",
                 department: "Computer Science",
@@ -97,7 +97,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              return {
                  id: MOCK_ID_MAP.faculty,
                  name: "Dr. Alan Turing",
-                 email: "alan.turing@campusconnect.edu",
+                 email: "alan.turing@example.edu",
                  role: "faculty",
                  facultyId: "F999",
                  department: "Computer Science",
@@ -109,7 +109,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              return {
                  id: MOCK_ID_MAP.admin,
                  name: "Admin User",
-                 email: "admin@campusconnect.edu",
+                 email: "admin@example.edu",
                  role: "admin",
                  department: "Administration",
                  avatarUrl: "https://picsum.photos/seed/admin/100/100",
@@ -120,7 +120,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              return {
                 id: MOCK_ID_MAP.print_cell,
                 name: "Print Operator",
-                email: "print.cell@campusconnect.edu",
+                email: "print.cell@example.edu",
                 role: "print_cell",
                 department: "Printing Services",
                 avatarUrl: "https://picsum.photos/seed/print/100/100",
@@ -131,7 +131,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
              return {
                 id: MOCK_ID_MAP.clearance_officer,
                 name: "Clearance Officer Lib",
-                email: "library.clear@campusconnect.edu",
+                email: "library.clear@example.edu",
                 role: "clearance_officer",
                 department: "Library",
                 avatarUrl: "https://picsum.photos/seed/library/100/100",

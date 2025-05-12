@@ -152,15 +152,15 @@ export function AppSidebar() {
       <SidebarHeader className="flex items-center justify-center p-4">
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="/Vedant.png"
-                alt="Cyber Sentinels VEDANT Logo"
-                data-ai-hint="cyber logo"
-                width={220} // Adjusted for sidebar
-                height={55}  // Adjusted for sidebar
+                src="/S.P.A.R.K..svg"
+                alt="S.P.A.R.K. Logo"
+                data-ai-hint="ai education logo"
+                width={350} 
+                height={87.5} 
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
-           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-sidebar-foreground whitespace-nowrap mt-1">CampusConnect</span>
+           <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden text-sidebar-foreground whitespace-nowrap mt-1">S.P.A.R.K.</span>
          </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
