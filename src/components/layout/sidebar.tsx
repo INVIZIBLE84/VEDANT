@@ -155,8 +155,8 @@ export function AppSidebar() {
                 src="/S.P.A.R.K..svg"
                 alt="S.P.A.R.K. Logo"
                 data-ai-hint="ai education logo"
-                width={350} 
-                height={87.5} 
+                width={150} 
+                height={37.5} 
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
