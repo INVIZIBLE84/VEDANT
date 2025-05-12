@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -155,11 +156,10 @@ export function AppSidebar() {
                 alt="S.P.A.R.K. Logo"
                 data-ai-hint="ai education logo"
                 width={150} 
-                height={37.5} // Adjusted height to maintain aspect ratio for 150 width
+                height={37.5} 
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
                 priority
              />
-             {/* Removed the S.P.A.R.K. text span here */}
          </Link>
       </SidebarHeader>
       <SidebarContent className="p-2">
@@ -222,3 +222,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
