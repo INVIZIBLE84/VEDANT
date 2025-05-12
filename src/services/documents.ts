@@ -5,7 +5,7 @@ import { FileType, FileSpreadsheet, LucidePresentation, ImageIcon, FileArchive, 
 /**
  * Types of documents managed by the system.
  */
-export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Schedule' | 'Timetable' | 'Syllabus' | 'Other'; // Added 'Timetable', 'Syllabus'
+export type DocumentType = 'Exam Paper' | 'Notice' | 'Application Form' | 'Circular' | 'Letter' | 'Schedule' | 'Timetable' | 'Syllabus' | 'Other';
 
 /**
  * Status of a document within the system.
@@ -129,13 +129,13 @@ let sampleDocuments: Document[] = [
         status: 'Archived', fileUrl: '/mock/CS101_Midterm_Spring24.pdf', fileSize: 140 * 1024, fileMimeType: 'application/pdf', version: 1, isArchived: true,
     },
     {
-        id: 'doc-schedule-cs-old', name: 'CS_Dept_Fall24_Timetable_Old.xlsx', type: 'Schedule', // Kept 'Schedule' type for existing data
+        id: 'doc-schedule-cs-fall24', name: 'CS_Dept_Fall24_Schedule.xlsx', type: 'Schedule',
         uploadedBy: { id: 'faculty999', name: 'Dr. Turing', role: 'faculty' }, uploadDate: '2024-07-29T14:00:00Z',
-        metadata: { department: 'Computer Science', semester: 'Fall 2024', tags: ['timetable', 'schedule'], academicYear: '2024-2025' },
-        status: 'Uploaded', fileUrl: '/mock/CS_Dept_Fall24_Timetable.xlsx', fileSize: 45 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 1, isArchived: false,
+        metadata: { department: 'Computer Science', semester: 'Fall 2024', tags: ['schedule', 'classes'], academicYear: '2024-2025' },
+        status: 'Uploaded', fileUrl: '/mock/CS_Dept_Fall24_Schedule.xlsx', fileSize: 45 * 1024, fileMimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', version: 1, isArchived: false,
     },
     {
-        id: 'doc-logo', name: 'S.P.A.R.K._Logo.png', type: 'Other',
+        id: 'doc-logo', name: 'S.P.A.R.K._Logo.svg', type: 'Other',
         uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-01T09:00:00Z',
         metadata: { department: 'Administration', tags: ['branding', 'logo'] },
         status: 'Uploaded', fileUrl: '/S.P.A.R.K..svg', fileSize: 120 * 1024, fileMimeType: 'image/svg+xml', version: 1, isArchived: false,
@@ -188,7 +188,7 @@ let sampleAuditLogs: { [documentId: string]: AuditLogEntry[] } = {
          { timestamp: '2024-07-20T10:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
          { timestamp: '2024-07-21T09:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Print Requested', details: '60 copies, A4' },
     ],
-    'doc-schedule-cs-old': [ // Changed ID to match sampleDocuments
+    'doc-schedule-cs-fall24': [
         { timestamp: '2024-07-29T14:00:00Z', userId: 'faculty999', userName: 'Dr. Turing', action: 'Uploaded', details: 'Version 1' },
         { timestamp: '2024-07-30T10:00:00Z', userId: 'student123', userName: 'Alice Smith', action: 'Viewed' },
     ],
@@ -675,12 +675,12 @@ export const getFileIconType = (mimeType?: string, docType?: DocumentType): File
     const lowerMime = mimeType.toLowerCase();
 
     if (lowerMime.includes('pdf')) return 'pdf';
-    if (lowerMime.includes('word') || lowerMime.includes('vnd.openxmlformats-officedocument.wordprocessingml')) return 'word'; // .doc, .docx
-    if (lowerMime.includes('spreadsheet') || lowerMime.includes('excel') || lowerMime.includes('vnd.openxmlformats-officedocument.spreadsheetml')) return 'excel'; // .xls, .xlsx
-    if (lowerMime.includes('presentation') || lowerMime.includes('powerpoint') || lowerMime.includes('vnd.openxmlformats-officedocument.presentationml')) return 'powerpoint'; // .ppt, .pptx
-    if (lowerMime.startsWith('image/')) return 'image'; // .png, .jpg, .gif, etc.
-    if (lowerMime.includes('zip') || lowerMime.includes('compressed') || lowerMime.includes('x-rar-compressed')) return 'zip'; // .zip, .rar, .7z etc.
-    if (lowerMime.startsWith('text/')) return 'text'; // .txt, .csv, .log etc.
+    if (lowerMime.includes('word') || lowerMime.includes('vnd.openxmlformats-officedocument.wordprocessingml.document')) return 'word';
+    if (lowerMime.includes('spreadsheet') || lowerMime.includes('excel') || lowerMime.includes('vnd.openxmlformats-officedocument.spreadsheetml.sheet')) return 'excel';
+    if (lowerMime.includes('presentation') || lowerMime.includes('powerpoint') || lowerMime.includes('vnd.openxmlformats-officedocument.presentationml.presentation')) return 'powerpoint';
+    if (lowerMime.startsWith('image/')) return 'image';
+    if (lowerMime.includes('zip') || lowerMime.includes('compressed') || lowerMime.includes('x-rar-compressed')) return 'zip';
+    if (lowerMime.startsWith('text/')) return 'text';
 
     return 'file'; // Default file icon type
 }
@@ -709,3 +709,4 @@ async function getCurrentUser(): Promise<{ id: string; role: UserRole } | null> 
     // For service functions, it's better if the calling component passes necessary user info.
     return { id: 'faculty999', role: 'faculty' };
 }
+

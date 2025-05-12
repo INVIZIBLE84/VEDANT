@@ -33,8 +33,8 @@ const FileIconMap: Record<FileIconType, React.ReactNode> = {
     image: <ImageIcon className="text-purple-500" />,
     zip: <FileArchive className="text-yellow-600" />,
     text: <FileType className="text-gray-500" />,
-    schedule: <CalendarClock className="text-indigo-500" />, // New Icon
-    syllabus: <BookOpen className="text-cyan-500" />, // New Icon
+    schedule: <CalendarClock className="text-indigo-500" />,
+    syllabus: <BookOpen className="text-cyan-500" />,
     file: <FileQuestion className="text-muted-foreground" />, // Default
 };
 
@@ -108,7 +108,7 @@ export default function DocumentsPage() {
 
      // Refetch print requests when filters change
      React.useEffect(() => {
-         if (user && (user.role === 'admin' || user.role === 'faculty' || user.role === 'print_cell')) {
+         if (user && (user?.role === 'admin' || user?.role === 'faculty' || user?.role === 'print_cell')) {
              fetchPrintRequests(printFilters, user.role);
          }
          // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,7 +417,7 @@ export default function DocumentsPage() {
                             const statusStyle = getStatusBadgeVariant(doc.status);
                             const iconType = getFileIconType(doc.fileMimeType, doc.type);
                             const canRequestPrint = (user?.role === 'faculty' || user?.role === 'admin') && !doc.isArchived && !['Approved for Print', 'Printing', 'Archived'].includes(doc.status);
-                            const canDownload = (user?.role === 'admin' || user?.id === doc.uploadedBy.id || (user?.role === 'print_cell' && ['Approved for Print', 'Printing'].includes(doc.status)));
+                            const canDownload = (user?.role === 'admin' || user?.id === doc.uploadedBy.id || (user?.role === 'print_cell' && ['Approved for Print', 'Printing'].includes(doc.status)) || user?.role === 'student'); // Allow students to download
                             const canArchive = user?.role === 'admin';
 
                             return (
@@ -780,4 +780,5 @@ export default function DocumentsPage() {
         </div>
     );
 }
+
 
