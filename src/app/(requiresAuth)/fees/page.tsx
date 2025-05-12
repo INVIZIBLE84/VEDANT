@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -7,13 +6,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, PlusCircle, Edit, Loader2, Search, Filter, Upload } from "lucide-react"; // Added Upload
+import { DollarSign, CheckCircle, Clock, AlertTriangle, Download, PlusCircle, Edit, Loader2, Search, Filter, Upload } from "lucide-react"; // Added Upload and Download
 import {
     getFeeDetails,
     getFeePayments,
     getAllFeeDetails, // For admin
     addFeePayment, // For admin
     importFeeDataFromFile, // New import function
+    exportFeeDataToCSV, // New export function
     type FeeDetails,
     type FeePayment,
     type FeeBreakdownItem,
@@ -46,6 +46,7 @@ export default function FeesPage() {
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<string | null>(null);
   const [showAddPaymentDialog, setShowAddPaymentDialog] = React.useState(false); // Control dialog
   const [isImportingFees, setIsImportingFees] = React.useState(false);
+  const [isExportingFees, setIsExportingFees] = React.useState(false);
 
 
   useEffect(() => {
@@ -206,6 +207,34 @@ export default function FeesPage() {
         } finally {
             setIsImportingFees(false);
             event.target.value = ''; // Reset file input to allow re-upload of same file
+        }
+    };
+
+    const handleExportFeeData = async () => {
+        if (!user || user.role !== 'admin') return;
+        setIsExportingFees(true);
+        toast({ title: "Exporting...", description: "Generating fee data CSV." });
+        try {
+            const csvData = await exportFeeDataToCSV(filters);
+            const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", `fee_data_export_${format(new Date(), 'yyyyMMdd_HHmmss')}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                toast({ title: "Success", description: "Fee data CSV exported." });
+            } else {
+                toast({ variant: "destructive", title: "Export Failed", description: "Browser does not support automatic downloads." });
+            }
+        } catch (err: any) {
+            console.error("Error exporting fee data:", err);
+            toast({ variant: "destructive", title: "Export Error", description: err.message || "Could not export fee data." });
+        } finally {
+            setIsExportingFees(false);
         }
     };
 
@@ -400,6 +429,10 @@ export default function FeesPage() {
                         <input id="import-fee-data" type="file" className="sr-only" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" onChange={handleFeeDataImport} />
                     </Label>
                  </Button>
+                 <Button variant="outline" onClick={handleExportFeeData} disabled={isExportingFees}>
+                    {isExportingFees ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Export CSV
+                 </Button>
              </div>
         </CardHeader>
         <CardContent>
@@ -408,7 +441,7 @@ export default function FeesPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Student ID</TableHead>
-                         {/* <TableHead>Name</TableHead> */}
+                         <TableHead>Name</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Balance Due</TableHead>
                         <TableHead className="hidden md:table-cell text-right">Total Paid</TableHead>
@@ -423,7 +456,7 @@ export default function FeesPage() {
                            return (
                              <TableRow key={fd.studentId}>
                                 <TableCell className="font-medium">{fd.studentId}</TableCell>
-                                {/* <TableCell>{fd.studentName || 'N/A'}</TableCell> */}
+                                <TableCell>{fd.studentName || 'N/A'}</TableCell>
                                 <TableCell>
                                      <Badge variant={statusStyle.variant} className={cn("text-xs", statusStyle.className)}>
                                        {statusIcon(fd.status)} {fd.status}
@@ -444,7 +477,7 @@ export default function FeesPage() {
                                          </DialogTrigger>
                                          <DialogContent>
                                              <DialogHeader>
-                                                 <DialogTitle>Add Payment for {fd.studentId}</DialogTitle>
+                                                 <DialogTitle>Add Payment for {fd.studentId} ({fd.studentName || 'N/A'})</DialogTitle>
                                                  <DialogDescription>Record a new fee payment received for this student.</DialogDescription>
                                              </DialogHeader>
                                              <form onSubmit={handleAddPaymentSubmit} className="space-y-4">
@@ -494,7 +527,7 @@ export default function FeesPage() {
                        })
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={6} className="text-center text-muted-foreground">
+                            <TableCell colSpan={7} className="text-center text-muted-foreground">
                                 No fee records found matching filters.
                             </TableCell>
                         </TableRow>
@@ -583,4 +616,3 @@ function FeeSkeleton() {
          </div>
     );
 }
-
