@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Attendance Collection Rules
+    match /attendance/{attendanceId} {
+      // Allow create if:
+      // 1. User is authenticated.
+      // 2. The student_id in the document matches the authenticated user's UID.
+      // 3. Required fields are present.
+      // 4. Data types are correct (basic check).
+      // 5. Frequency is within the valid range.
+      // 6. Client-side timestamp is not being set (serverTimestamp should be used).
+      allow create: if request.auth != null
+                       && request.resource.data.student_id == request.auth.uid
+                       && request.resource.data.keys().hasAll(['student_id', 'class_code', 'session_code', 'frequency_detected', 'timestamp'])
+                       && request.resource.data.student_id is string
+                       && request.resource.data.class_code is string
+                       && request.resource.data.session_code is string
+                       && request.resource.data.frequency_detected is number
+                       && request.resource.data.timestamp == request.time // Enforce server timestamp
+                       && request.resource.data.frequency_detected >= 18.5
+                       && request.resource.data.frequency_detected <= 20.5
+                       && (!('device_id' in request.resource.data) || request.resource.data.device_id is string); // Optional device_id
+
+      // Allow read by the student who owns the record.
+      // For faculty/admin access, you'd typically check custom claims or a roles collection.
+      allow read: if request.auth != null && resource.data.student_id == request.auth.uid;
+      // Example: Allow admin to read all attendance
+      // allow read: if request.auth != null && (
+      //                 resource.data.student_id == request.auth.uid ||
+      //                 get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      //               );
+
+      // Generally, updates and deletes are restricted or handled by backend functions.
+      allow update, delete: if false; // Or specific admin roles
+    }
+
+    // Placeholder for other collections (e.g., users, classes, sessions)
+    // match /users/{userId} {
+    //   allow read: if request.auth != null && request.auth.uid == userId;
+    //   // Define other rules for users collection
+    // }
+
+    // match /classes/{classId} {
+    //   // Rules for class schedules and configurations
+    //   allow read: if request.auth != null;
+    // }
+
+    // match /sessions/{sessionId} {
+    //   // Rules for specific lecture sessions, potentially storing start/end times
+    //   allow read: if request.auth != null;
+    // }
+  }
+}
