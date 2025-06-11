@@ -8,26 +8,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input"; // Added Input
 import { useToast } from "@/hooks/use-toast";
-import { Check, X, Clock, Loader2, CalendarDays, BarChart2, Download, AlertTriangle, RadioTower, ListChecks, Power, Users } from "lucide-react";
+import { Check, X, Clock, Loader2, CalendarDays, BarChart2, AlertTriangle, ListChecks, RadioTower, Code, Timer, Send } from "lucide-react"; // Added Code, Timer, Send
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // Added RadioGroup
 
 import {
     getStudentAttendance,
     calculateAttendanceSummary,
-    markAttendance, // Updated to handle different methods
+    markManualAttendance,
     getTodayAttendanceStatus,
+    startNewAttendanceSession, // New service
+    submitStudentAttendance,  // New service
     type AttendanceRecord,
     type AttendanceSummary,
+    type AttendanceSessionStartResult,
 } from "@/services/attendance";
 import { getCurrentUser, AuthUser, UserRole } from "@/types/user";
-import { getUsers, type AdminUserFilters } from "@/services/admin"; // For fetching student list
+import { getUsers } from "@/services/admin";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-
-const MOCK_CLASS_ID_ULTRASONIC = "CS-ULTRA-101"; // Example class ID for ultrasonic sessions
 
 export default function AttendancePage() {
   const { toast } = useToast();
@@ -37,16 +40,21 @@ export default function AttendancePage() {
   // Student specific state
   const [studentAttendanceData, setStudentAttendanceData] = useState<AttendanceRecord[]>([]);
   const [studentSummary, setStudentSummary] = useState<AttendanceSummary | null>(null);
-  const [studentTodayStatus, setStudentTodayStatus] = useState<{ status: 'Present' | 'Absent' | 'Not Marked'; time?: string } | null>(null);
-  const [isUltrasonicListening, setIsUltrasonicListening] = useState(false);
-  const [isMarkingStudent, setIsMarkingStudent] = useState(false);
+  const [studentTodayStatus, setStudentTodayStatus] = useState<{ status: 'Present' | 'Absent' | 'Not Marked'; time?: string; method?: string } | null>(null);
+  const [studentActiveSession, setStudentActiveSession] = useState<{ sessionId: string; classCode: string; generatedCodes: string[]; endTime: Date } | null>(null);
+  const [selectedCodeByStudent, setSelectedCodeByStudent] = useState<string>("");
+  const [isSubmittingStudentAttendance, setIsSubmittingStudentAttendance] = useState(false);
 
   // Faculty/Admin specific state
-  const [isEmitterActive, setIsEmitterActive] = useState(false);
+  const [facultyClassCodeInput, setFacultyClassCodeInput] = useState("");
+  const [isStartingSession, setIsStartingSession] = useState(false);
+  const [activeFacultySession, setActiveFacultySession] = useState<AttendanceSessionStartResult & {endTime?: Date} | null>(null);
+  const [sessionCountdown, setSessionCountdown] = useState<string>("");
+
   const [manualStudentList, setManualStudentList] = useState<AuthUser[]>([]);
   const [selectedStudentsForManual, setSelectedStudentsForManual] = useState<Record<string, boolean>>({});
   const [isSubmittingManual, setIsSubmittingManual] = useState(false);
-  const [allAttendanceRecords, setAllAttendanceRecords] = useState<AttendanceRecord[]>([]); // For admin/faculty view records tab
+  const [allAttendanceRecords, setAllAttendanceRecords] = useState<AttendanceRecord[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,6 +70,11 @@ export default function AttendancePage() {
       setStudentAttendanceData(data);
       setStudentSummary(calculateAttendanceSummary(data));
       setStudentTodayStatus(status);
+      // TODO: Student should fetch active sessions for their classes here.
+      // For now, this will be manually triggered or mocked.
+      // Simulating a found active session for demo:
+      // setStudentActiveSession({ sessionId: "mockSession123", classCode: "CS101", generatedCodes: ["12", "34", "56"], endTime: new Date(Date.now() + 120000) });
+
     } catch (err) {
       console.error("Error fetching student attendance:", err);
       setError("Failed to load your attendance data.");
@@ -71,15 +84,11 @@ export default function AttendancePage() {
 
   const fetchAdminFacultyData = useCallback(async () => {
     try {
-      // Fetch all students for manual marking tab
-      const students = await getUsers({ role: 'student' }); // Filter for students
+      const students = await getUsers({ role: 'student' });
       setManualStudentList(students);
-
-      // Fetch all attendance records for "View Records" tab (can be refined with filters later)
-      // Simulating fetching all records - replace with actual admin/faculty specific fetch if available
-      const allRecords = await getStudentAttendance(''); // This service needs to be adapted or use a new one for "all"
-      setAllAttendanceRecords(allRecords); // This is a placeholder, ideally needs a getAttendanceForAdmin/Faculty
-
+      // For "View Records" tab - can be refined
+      const allRecords = await getStudentAttendance(); // Fetches all for admin
+      setAllAttendanceRecords(allRecords);
     } catch (err) {
       console.error("Error fetching admin/faculty data:", err);
       setError("Failed to load data for attendance management.");
@@ -87,13 +96,11 @@ export default function AttendancePage() {
     }
   }, [toast]);
 
-
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
       setError(null);
       setCurrentDateString(new Date().toLocaleDateString());
-
       const user = await getCurrentUser();
       setCurrentUser(user);
 
@@ -114,51 +121,118 @@ export default function AttendancePage() {
     initialize();
   }, [fetchStudentData, fetchAdminFacultyData]);
 
+  // Countdown timer effect for faculty session
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeFacultySession?.endTime) {
+      const updateCountdown = () => {
+        const now = new Date().getTime();
+        const distance = activeFacultySession.endTime!.getTime() - now;
+        if (distance < 0) {
+          setSessionCountdown("Session Expired");
+          setActiveFacultySession(null); // Clear session when expired
+          clearInterval(interval);
+        } else {
+          const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+          setSessionCountdown(`${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
+        }
+      };
+      updateCountdown(); // Initial call
+      interval = setInterval(updateCountdown, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeFacultySession?.endTime]);
 
-  // --- Student: Ultrasonic Attendance ---
-  const handleUltrasonicReady = async () => {
-    if (!currentUser || currentUser.role !== 'student') return;
-    setIsUltrasonicListening(true);
-    setIsMarkingStudent(true);
+
+  // --- Faculty/Admin: Code Challenge Session Control ---
+  const handleStartCodeChallengeSession = async () => {
+    if (!facultyClassCodeInput.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Please enter a class code." });
+      return;
+    }
+    setIsStartingSession(true);
     setError(null);
-    toast({ title: "Listening for Ultrasonic Signal...", description: "Please wait for detection." });
-
-    // Simulate detection
-    await new Promise(resolve => setTimeout(resolve, 3000)); // 3-second "listening"
-
     try {
-      // Simulate successful detection for now
-      const result = await markAttendance(currentUser.id, {
-        method: 'ultrasonic',
-        classId: MOCK_CLASS_ID_ULTRASONIC, // Example class ID
-        isPresentOverride: true // Ultrasonic implies presence
-      });
-
-      if (result.success) {
-        toast({ title: "Attendance Marked!", description: result.message });
-        await fetchStudentData(currentUser.id); // Refresh data
+      const result = await startNewAttendanceSession(facultyClassCodeInput.trim());
+      if (result.success && result.session_id && result.generated_codes && result.end_time) {
+        const endTime = new Date(result.end_time._seconds * 1000 + result.end_time._nanoseconds / 1000000);
+        setActiveFacultySession({...result, endTime});
+        toast({ title: "Session Started", description: `Challenge session for ${facultyClassCodeInput} is active. Announce the correct code.` });
+        // IMPORTANT: Faculty needs to know the 'correct_code'.
+        // Assuming 'result.correct_code' is returned by the backend function to the faculty.
+        // If not, this UI part for faculty to see the correct code is illustrative.
+        if(result.correct_code) {
+            console.log("Faculty: The correct code to announce is: ", result.correct_code);
+            // Display it securely if needed, or just keep in console for this demo
+        } else {
+            toast({variant: "destructive", title: "Warning", description: "Backend did not return correct code to faculty."})
+        }
       } else {
         setError(result.message);
-        toast({ variant: "destructive", title: "Marking Failed", description: result.message });
+        toast({ variant: "destructive", title: "Failed to Start", description: result.message });
       }
     } catch (err) {
-      console.error("Error marking ultrasonic attendance:", err);
+      console.error("Error starting code challenge session:", err);
       setError("An unexpected error occurred.");
-      toast({ variant: "destructive", title: "Error", description: "Could not mark attendance." });
+      toast({ variant: "destructive", title: "Error", description: "Could not start session." });
     } finally {
-      setIsUltrasonicListening(false);
-      setIsMarkingStudent(false);
+      setIsStartingSession(false);
     }
   };
 
-  // --- Faculty/Admin: Ultrasonic Control ---
-  const handleToggleEmitter = () => {
-    setIsEmitterActive(!isEmitterActive);
-    toast({
-      title: isEmitterActive ? "Ultrasonic Emitter Stopped" : "Ultrasonic Emitter Started",
-      description: isEmitterActive ? "Students can no longer mark attendance via ultrasonic signal for this session." : "Students can now attempt to mark attendance using the ultrasonic signal.",
-    });
+  // --- Student: Submit Code Challenge Attendance ---
+  const handleStudentCodeSubmit = async () => {
+    if (!studentActiveSession?.sessionId) {
+      toast({ variant: "destructive", title: "Error", description: "No active session found." });
+      return;
+    }
+    if (!selectedCodeByStudent) {
+      toast({ variant: "destructive", title: "Error", description: "Please select a code." });
+      return;
+    }
+    setIsSubmittingStudentAttendance(true);
+    setError(null);
+    try {
+      const result = await submitStudentAttendance(studentActiveSession.sessionId, selectedCodeByStudent);
+      if (result.success) {
+        toast({ title: "Attendance Submitted", description: result.message });
+        if (result.status === 'present' && currentUser) {
+          await fetchStudentData(currentUser.id); // Refresh student data
+        }
+        setStudentActiveSession(null); // Clear session after submission
+        setSelectedCodeByStudent("");
+      } else {
+        setError(result.message);
+        toast({ variant: "destructive", title: "Submission Failed", description: result.message });
+      }
+    } catch (err) {
+      console.error("Error submitting student attendance:", err);
+      setError("An unexpected error occurred.");
+      toast({ variant: "destructive", title: "Error", description: "Could not submit attendance." });
+    } finally {
+      setIsSubmittingStudentAttendance(false);
+    }
   };
+  
+  // --- Mock function for student to "find" an active session (replace with real logic) ---
+  const handleStudentCheckActiveSession = () => {
+      // In a real app, query Firestore for active sessions for student's classes
+      // For demo, we'll mock finding a session if faculty has started one recently
+      if (activeFacultySession && activeFacultySession.session_id && activeFacultySession.generated_codes && activeFacultySession.endTime && activeFacultySession.endTime > new Date()) {
+          setStudentActiveSession({
+              sessionId: activeFacultySession.session_id,
+              classCode: facultyClassCodeInput, // Assuming student is in this class
+              generatedCodes: activeFacultySession.generated_codes,
+              endTime: activeFacultySession.endTime
+          });
+          toast({ title: "Active Session Found", description: `Join session for class ${facultyClassCodeInput}.`});
+      } else {
+          toast({ title: "No Active Session", description: "No active attendance session found for your classes at this moment."});
+          setStudentActiveSession(null);
+      }
+  };
+
 
   // --- Faculty/Admin: Manual Attendance ---
   const handleManualStudentSelect = (studentId: string, checked: boolean | "indeterminate") => {
@@ -173,18 +247,17 @@ export default function AttendancePage() {
     setError(null);
     let successCount = 0;
     let failCount = 0;
-
     const todayDate = new Date().toISOString().split('T')[0];
 
     for (const studentId in selectedStudentsForManual) {
-      if (selectedStudentsForManual[studentId]) { // Only mark if checkbox is true (present)
+      if (selectedStudentsForManual[studentId]) {
         try {
-          const result = await markAttendance(studentId, {
-            method: 'manual',
-            classId: 'MANUAL-CLASS', // Example class for manual entries
+          // Using new markManualAttendance function
+          const result = await markManualAttendance(studentId, {
+            classId: 'MANUAL-CLASS-' + todayDate, // Example class for manual entries
             markedBy: currentUser.id,
-            isPresentOverride: true, // Manual marking implies presence here
-            dateOverride: todayDate // Ensure it's for today
+            isPresent: true, // Manual marking implies presence here
+            dateOverride: todayDate
           });
           if (result.success) {
             successCount++;
@@ -198,56 +271,19 @@ export default function AttendancePage() {
         }
       }
     }
-
     toast({
       title: "Manual Attendance Submitted",
       description: `${successCount} marked successfully. ${failCount} failed.`,
     });
-    setSelectedStudentsForManual({}); // Clear selections
+    setSelectedStudentsForManual({});
     setIsSubmittingManual(false);
-    // Optionally, re-fetch all attendance records for the "View Records" tab
-    // await fetchAdminFacultyData(); // Or a more specific refresh
+    if (currentUser?.role !== 'student') await fetchAdminFacultyData(); // Refresh list
   };
 
 
-  // --- Render Loading/Error States ---
-  if (isLoading) {
-    return (
-       <div className="space-y-6">
-         <h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1>
-         <Card>
-            <CardHeader><CardTitle>Loading Attendance...</CardTitle></CardHeader>
-            <CardContent className="flex justify-center items-center p-10"><Loader2 className="h-12 w-12 animate-spin text-primary" /></CardContent>
-         </Card>
-       </div>
-    );
-  }
-
-   if (error) {
-    return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1>
-            <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Error Loading Data</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
-            </Alert>
-        </div>
-    );
-   }
-   if (!currentUser) {
-     return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1>
-             <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Authentication Error</AlertTitle>
-                <AlertDescription>Could not determine user. Please try logging in again.</AlertDescription>
-             </Alert>
-        </div>
-     );
-   }
-
+  if (isLoading) return <div className="space-y-6"><h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1><Card><CardHeader><CardTitle>Loading Attendance...</CardTitle></CardHeader><CardContent className="flex justify-center items-center p-10"><Loader2 className="h-12 w-12 animate-spin text-primary" /></CardContent></Card></div>;
+  if (error && !studentActiveSession && !activeFacultySession) return <div className="space-y-6"><h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1><Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>;
+  if (!currentUser) return <div className="space-y-6"><h1 className="text-3xl font-bold text-primary flex items-center gap-2"><CalendarDays /> Attendance</h1><Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Authentication Error</AlertTitle><AlertDescription>Could not determine user.</AlertDescription></Alert></div>;
 
   // --- Student View ---
   const renderStudentView = () => (
@@ -255,7 +291,7 @@ export default function AttendancePage() {
       <Card className="transform transition-transform duration-300 hover:shadow-lg">
         <CardHeader>
           <CardTitle>Today's Attendance</CardTitle>
-           <CardDescription>{currentDateString ? `Status for ${currentDateString}.` : `Loading date...`} Ensure you are in class for ultrasonic marking!</CardDescription>
+          <CardDescription>{currentDateString ? `Status for ${currentDateString}.` : `Loading date...`} Look for active sessions.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
@@ -270,26 +306,56 @@ export default function AttendancePage() {
             )}>
                 {studentTodayStatus?.status ?? 'Loading...'}
                 {studentTodayStatus?.time && ` at ${studentTodayStatus.time}`}
+                {studentTodayStatus?.method && ` (via ${studentTodayStatus.method.replace('_', ' ')})`}
             </span>
           </div>
-          <Button
-            onClick={handleUltrasonicReady}
-            disabled={isMarkingStudent || studentTodayStatus?.status === 'Present'}
-            className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground"
-          >
-            {isMarkingStudent ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RadioTower className="mr-2 h-4 w-4" />}
-            {isUltrasonicListening ? "Listening..." : (studentTodayStatus?.status === 'Present' ? "Marked (Ultrasonic)" : "Ready to Mark (Ultrasonic)")}
-          </Button>
         </CardContent>
-         {error && <CardFooter><Alert variant="destructive" className="w-full"><AlertDescription>{error}</AlertDescription></Alert></CardFooter>}
+      </Card>
+
+      <Card className="transform transition-transform duration-300 hover:shadow-lg">
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Code className="h-5 w-5" /> Code Challenge Attendance</CardTitle>
+            <CardDescription>Join an active session announced by your faculty.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {!studentActiveSession ? (
+                <Button onClick={handleStudentCheckActiveSession} className="w-full sm:w-auto bg-accent hover:bg-accent/90 text-accent-foreground">
+                    <RadioTower className="mr-2 h-4 w-4" /> Check for Active Sessions
+                </Button>
+            ) : (
+                <div className="space-y-4">
+                    <Alert>
+                        <Timer className="h-4 w-4" />
+                        <AlertTitle>Session for {studentActiveSession.classCode} is Active!</AlertTitle>
+                        <AlertDescription>
+                            Select the code announced by your faculty. Session ends in: {sessionCountdown || format(studentActiveSession.endTime, 'HH:mm:ss')}
+                        </AlertDescription>
+                    </Alert>
+                    <RadioGroup value={selectedCodeByStudent} onValueChange={setSelectedCodeByStudent} className="flex flex-col sm:flex-row gap-4 justify-center">
+                        {studentActiveSession.generatedCodes.map(code => (
+                            <Label key={code} htmlFor={`code-${code}`} 
+                                className={cn(
+                                    "flex-1 cursor-pointer rounded-md border-2 p-4 text-center text-2xl font-bold transition-all hover:border-primary",
+                                    selectedCodeByStudent === code ? "border-primary bg-primary/10 text-primary ring-2 ring-primary" : "border-muted"
+                                )}>
+                                <RadioGroupItem value={code} id={`code-${code}`} className="sr-only" />
+                                {code}
+                            </Label>
+                        ))}
+                    </RadioGroup>
+                    <Button onClick={handleStudentCodeSubmit} disabled={isSubmittingStudentAttendance || !selectedCodeByStudent} className="w-full">
+                        {isSubmittingStudentAttendance ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                        Submit Attendance
+                    </Button>
+                </div>
+            )}
+            {error && <Alert variant="destructive" className="mt-4"><AlertDescription>{error}</AlertDescription></Alert>}
+        </CardContent>
       </Card>
 
       {studentSummary && (
          <Card className="transform transition-transform duration-300 hover:shadow-lg">
-           <CardHeader>
-             <CardTitle>Attendance Summary</CardTitle>
-             <CardDescription>Your overview for the recorded period.</CardDescription>
-           </CardHeader>
+           <CardHeader><CardTitle>Attendance Summary</CardTitle><CardDescription>Your overview.</CardDescription></CardHeader>
            <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <SummaryBox label="Total Days" value={studentSummary.totalDays} color="secondary" />
               <SummaryBox label="Present" value={studentSummary.presentDays} color="green" />
@@ -298,69 +364,57 @@ export default function AttendancePage() {
            </CardContent>
          </Card>
       )}
-
-       <Card className="transform transition-transform duration-300 hover:shadow-lg">
-         <CardHeader>
-             <CardTitle>Attendance Calendar</CardTitle>
-             <CardDescription>Your attendance history at a glance.</CardDescription>
-         </CardHeader>
-          <CardContent className="flex justify-center">
-             <Calendar
-                mode="multiple"
-                selected={studentAttendanceData.filter(r => r.isPresent).map(r => new Date(r.date))}
-                modifiers={{
-                    absent: studentAttendanceData.filter(r => !r.isPresent).map(r => new Date(r.date)),
-                }}
-                modifiersClassNames={{
-                    selected: 'bg-green-500/20 text-green-800 rounded-full',
-                    absent: 'bg-red-500/20 text-red-800 rounded-full line-through',
-                }}
-                className="rounded-md border p-3"
-              />
-          </CardContent>
-       </Card>
-       {renderDetailedTable(studentAttendanceData, false)}
+      {renderDetailedTable(studentAttendanceData, false)}
     </>
   );
 
   // --- Faculty/Admin View ---
   const renderFacultyAdminView = () => (
-    <Tabs defaultValue="ultrasonic_control" className="w-full">
+    <Tabs defaultValue="code_challenge" className="w-full">
       <TabsList className="grid w-full grid-cols-2 md:grid-cols-3">
-        <TabsTrigger value="ultrasonic_control"><RadioTower className="mr-1 h-4 w-4" />Ultrasonic Session</TabsTrigger>
+        <TabsTrigger value="code_challenge"><Code className="mr-1 h-4 w-4" />Code Challenge</TabsTrigger>
         <TabsTrigger value="manual_entry"><ListChecks className="mr-1 h-4 w-4" />Manual Entry</TabsTrigger>
         <TabsTrigger value="view_records"><BarChart2 className="mr-1 h-4 w-4" />View Records</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="ultrasonic_control">
+      <TabsContent value="code_challenge">
         <Card className="transform transition-transform duration-300 hover:shadow-lg">
           <CardHeader>
-            <CardTitle>Ultrasonic Attendance Control</CardTitle>
-            <CardDescription>Start or stop the ultrasonic emitter for the current lecture session.</CardDescription>
+            <CardTitle>Code Challenge Session Control</CardTitle>
+            <CardDescription>Start a new code challenge session for a class.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button onClick={handleToggleEmitter} className={cn("w-full sm:w-auto", isEmitterActive ? "bg-red-600 hover:bg-red-700" : "bg-green-600 hover:bg-green-700")}>
-              <Power className="mr-2 h-4 w-4" />
-              {isEmitterActive ? "Stop Ultrasonic Emitter" : "Start Ultrasonic Emitter"}
-            </Button>
-            {isEmitterActive && (
-              <Alert variant="default" className="bg-green-50 border-green-300 text-green-700">
-                <RadioTower className="h-4 w-4 text-green-600" />
-                <AlertTitle>Emitter Active</AlertTitle>
-                <AlertDescription>Students can now mark their attendance using the ultrasonic signal. Ensure the physical emitter device is operational.</AlertDescription>
-              </Alert>
+            {!activeFacultySession ? (
+                <>
+                    <Label htmlFor="classCode">Class Code</Label>
+                    <Input
+                        id="classCode"
+                        placeholder="e.g., CS101"
+                        value={facultyClassCodeInput}
+                        onChange={(e) => setFacultyClassCodeInput(e.target.value)}
+                        disabled={isStartingSession}
+                    />
+                    <Button onClick={handleStartCodeChallengeSession} disabled={isStartingSession || !facultyClassCodeInput.trim()} className="w-full sm:w-auto">
+                        {isStartingSession ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RadioTower className="mr-2 h-4 w-4" />}
+                        Start Session
+                    </Button>
+                </>
+            ) : (
+                <Alert variant="default" className="bg-green-50 border-green-300 text-green-700">
+                    <Timer className="h-4 w-4 text-green-600" />
+                    <AlertTitle>Session for {facultyClassCodeInput} is Active!</AlertTitle>
+                    <AlertDescription className="space-y-2">
+                        <p>Session ID: <span className="font-mono text-xs">{activeFacultySession.session_id}</span></p>
+                        <p>Generated Codes: <span className="font-bold text-lg">{activeFacultySession.generated_codes?.join(" / ")}</span></p>
+                        {activeFacultySession.correct_code && <p className="text-red-600 font-semibold">Announce this code: <span className="font-bold text-xl">{activeFacultySession.correct_code}</span></p>}
+                        <p>Time Remaining: <span className="font-mono text-lg">{sessionCountdown}</span></p>
+                        <Button variant="destructive" size="sm" onClick={() => setActiveFacultySession(null)}>End Session Manually</Button>
+                    </AlertDescription>
+                </Alert>
             )}
-            {!isEmitterActive && (
-                 <Alert variant="default" className="bg-yellow-50 border-yellow-300 text-yellow-700">
-                     <RadioTower className="h-4 w-4 text-yellow-600" />
-                    <AlertTitle>Emitter Inactive</AlertTitle>
-                    <AlertDescription>The ultrasonic emitter is currently off. Students cannot mark attendance via this method.</AlertDescription>
-                 </Alert>
-            )}
+            {error && <Alert variant="destructive" className="mt-4"><AlertDescription>{error}</AlertDescription></Alert>}
           </CardContent>
-           <CardFooter>
-              <p className="text-xs text-muted-foreground">Note: This simulates control of a physical ultrasonic device. Actual hardware integration is required.</p>
-           </CardFooter>
+          <CardFooter><p className="text-xs text-muted-foreground">Students will select the verbally announced correct code from the three options shown in their app.</p></CardFooter>
         </Card>
       </TabsContent>
 
@@ -368,7 +422,7 @@ export default function AttendancePage() {
         <Card className="transform transition-transform duration-300 hover:shadow-lg">
           <CardHeader>
             <CardTitle>Manual Attendance Entry</CardTitle>
-            <CardDescription>Mark attendance for students for the current date ({currentDateString}). Select students and mark them as present.</CardDescription>
+            <CardDescription>Mark attendance for students for {currentDateString}.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {manualStudentList.length > 0 ? (
@@ -381,82 +435,63 @@ export default function AttendancePage() {
                       onCheckedChange={(checked) => handleManualStudentSelect(student.id, checked)}
                     />
                     <Label htmlFor={`manual-${student.id}`} className="flex-1 cursor-pointer">
-                      {student.name} ({student.studentId || student.id}) - {student.department || 'N/A'}
+                      {student.name} ({student.studentId || student.id})
                     </Label>
                   </div>
                 ))}
               </div>
-            ) : (
-              <p className="text-muted-foreground">No students found or list is loading.</p>
-            )}
+            ) : <p className="text-muted-foreground">No students found.</p>}
             <Button onClick={handleManualSubmit} disabled={isSubmittingManual || Object.values(selectedStudentsForManual).every(v => !v)}>
               {isSubmittingManual ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
               Submit Manual Attendance
             </Button>
           </CardContent>
-          <CardFooter>
-              <p className="text-xs text-muted-foreground">Ensure the correct date is implied. Submitted attendance will be marked as 'Present'.</p>
-           </CardFooter>
+          <CardFooter><p className="text-xs text-muted-foreground">Submitted attendance will be marked as 'Present'.</p></CardFooter>
         </Card>
       </TabsContent>
 
       <TabsContent value="view_records">
-         {/* TODO: This should ideally fetch faculty/admin specific "all records" data */}
          {renderDetailedTable(allAttendanceRecords, true)}
       </TabsContent>
     </Tabs>
   );
 
-  // --- Helper: Detailed Table ---
   const renderDetailedTable = (data: AttendanceRecord[], showStudentName = false) => (
     <Card className="transform transition-transform duration-300 hover:shadow-lg">
       <CardHeader>
         <CardTitle>Detailed Records</CardTitle>
-         <CardDescription>List of {userRole === 'student' ? 'your' : 'all'} recorded attendance.</CardDescription>
+        <CardDescription>List of {userRole === 'student' ? 'your' : 'all'} recorded attendance.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-               {showStudentName && <TableHead>Student</TableHead>}
+              {showStudentName && <TableHead>Student</TableHead>}
               <TableHead>Date</TableHead>
               <TableHead className="text-center">Status</TableHead>
               <TableHead className="hidden sm:table-cell">Time Marked</TableHead>
-               <TableHead className="hidden md:table-cell">Remarks</TableHead>
-               {userRole === 'admin' && <TableHead className="text-right">Actions</TableHead>}
+              <TableHead className="hidden md:table-cell">Method</TableHead>
+              <TableHead className="hidden md:table-cell">Remarks</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length > 0 ? (
               data.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime() || (b.timestamp || '').localeCompare(a.timestamp || '')).map((record) => (
                 <TableRow key={record.id}>
-                   {showStudentName && <TableCell>{record.studentName || record.studentId}</TableCell>}
+                  {showStudentName && <TableCell>{record.studentName || record.studentId}</TableCell>}
                   <TableCell>{new Date(record.date).toLocaleDateString()}</TableCell>
                   <TableCell className="text-center">
-                    {record.isPresent ? (
-                      <Check className="h-5 w-5 text-green-500 inline-block" />
-                    ) : (
-                      <X className="h-5 w-5 text-red-500 inline-block" />
-                    )}
+                    {record.isPresent ? <Check className="h-5 w-5 text-green-500 inline-block" /> : <X className="h-5 w-5 text-red-500 inline-block" />}
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
                     {record.timestamp ? format(new Date(record.timestamp), 'p') : 'N/A'}
                   </TableCell>
-                   <TableCell className="hidden md:table-cell text-muted-foreground">{record.remarks || '-'}</TableCell>
-                    {userRole === 'admin' && (
-                        <TableCell className="text-right">
-                            {/* TODO: Admin override action button */}
-                            <Button variant="ghost" size="sm" >Override</Button>
-                        </TableCell>
-                    )}
+                  <TableCell className="hidden md:table-cell text-muted-foreground capitalize">{record.method?.replace('_', ' ') || '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">{record.remarks || '-'}</TableCell>
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={showStudentName ? (userRole === 'admin' ? 6 : 5) : (userRole === 'admin' ? 5 : 4)} className="text-center text-muted-foreground">
-                  No attendance records found.
-                </TableCell>
-              </TableRow>
+              <TableRow><TableCell colSpan={showStudentName ? 6 : 5} className="text-center text-muted-foreground">No records found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -464,28 +499,18 @@ export default function AttendancePage() {
     </Card>
  );
 
-
-  // --- Main Return ---
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-primary flex items-center gap-2">
          <CalendarDays className="h-7 w-7" /> Attendance <span className="text-sm font-normal text-muted-foreground">({userRole})</span>
       </h1>
-
        {userRole === 'student' && renderStudentView()}
        {(userRole === 'faculty' || userRole === 'admin') && renderFacultyAdminView()}
-
     </div>
   );
 }
 
-
-// --- Helper Component for Summary Boxes ---
-interface SummaryBoxProps {
-    label: string;
-    value: string | number;
-    color: 'primary' | 'secondary' | 'green' | 'red';
-}
+interface SummaryBoxProps { label: string; value: string | number; color: 'primary' | 'secondary' | 'green' | 'red';}
 function SummaryBox({ label, value, color }: SummaryBoxProps) {
     const colorClasses = {
         primary: 'bg-primary/10 text-primary',
@@ -493,11 +518,5 @@ function SummaryBox({ label, value, color }: SummaryBoxProps) {
         green: 'bg-green-500/10 text-green-600',
         red: 'bg-red-500/10 text-red-600',
     };
-    return (
-        <div className={`flex flex-col items-center p-4 rounded-lg ${colorClasses[color]}`}>
-            <span className="text-2xl font-bold">{value}</span>
-            <span className="text-sm text-muted-foreground">{label}</span>
-        </div>
-    );
+    return (<div className={`flex flex-col items-center p-4 rounded-lg ${colorClasses[color]}`}><span className="text-2xl font-bold">{value}</span><span className="text-sm text-muted-foreground">{label}</span></div>);
 }
-
