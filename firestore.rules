@@ -1,0 +1,69 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check user role (assumes a 'users' collection with role field)
+    function isUserRole(role) {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    function isOneOfRoles(roles) {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return userRole in roles;
+    }
+
+    // Attendance Sessions: Store active session details (codes, correct code, timing)
+    match /attendance_sessions/{sessionId} {
+      allow read: if request.auth != null; // All authenticated users can read session details (e.g., to get valid_codes if shown on student app)
+      
+      // Only faculty or admin can create new sessions
+      allow create: if request.auth != null && isOneOfRoles(['admin', 'faculty'])
+                    && request.resource.data.keys().hasAll(['class_code', 'valid_codes', 'correct_code', 'start_time', 'end_time', 'created_by'])
+                    && request.resource.data.created_by == request.auth.uid
+                    && request.resource.data.start_time == request.time // Ensure start_time is server timestamp
+                    && request.resource.data.valid_codes is list && request.resource.data.valid_codes.size() == 3
+                    && request.resource.data.correct_code is string && request.resource.data.correct_code in request.resource.data.valid_codes
+                    && request.resource.data.end_time > request.resource.data.start_time;
+
+      // Sessions are generally immutable once created, or deletable by admin/creator
+      allow update: if false; // Or specific logic: request.auth != null && (isUserRole('admin') || resource.data.created_by == request.auth.uid);
+      allow delete: if request.auth != null && isOneOfRoles(['admin', 'faculty']) && (isUserRole('admin') || resource.data.created_by == request.auth.uid);
+    }
+
+    // Attendance: Store student submissions for each session
+    match /attendance/{attendanceId} {
+      // Student can read their own attendance records
+      // Faculty/Admin can read all attendance records for reporting
+      allow read: if request.auth != null && 
+                     (request.auth.uid == resource.data.student_id || isOneOfRoles(['admin', 'faculty']));
+      
+      // Authenticated student can create their own attendance record
+      allow create: if request.auth != null 
+                    // Submitted by the authenticated user
+                    && request.auth.uid == request.resource.data.student_id
+                    // Required fields check
+                    && request.resource.data.keys().hasAll(['student_id', 'session_id', 'class_code', 'selected_code', 'is_correct', 'status', 'timestamp'])
+                    // Ensure correct types
+                    && request.resource.data.student_id is string
+                    && request.resource.data.session_id is string
+                    && request.resource.data.class_code is string
+                    && request.resource.data.selected_code is string
+                    && request.resource.data.is_correct is bool
+                    && request.resource.data.status is string
+                    // Timestamp must be server-generated
+                    && request.resource.data.timestamp == request.time
+                    // Ensure student_id in the document matches the authenticated user's UID
+                    && request.resource.data.student_id == request.auth.uid;
+                    // Further validation (e.g., selected_code is one of the valid_codes for the session) can be done in Cloud Function
+
+      // Attendance records are immutable once created
+      allow update: if false;
+      allow delete: if request.auth != null && isUserRole('admin'); // Only admin can delete
+    }
+
+    // Default deny all other collections (if any) unless explicitly allowed
+    // match /{document=**} {
+    //  allow read, write: if false;
+    // }
+  }
+}
