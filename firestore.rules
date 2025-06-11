@@ -1,10 +1,11 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check user role (assumes a 'users' collection with role field)
-    function isUserRole(role) {
+    // Helper function to check user role
+    function isRole(role) {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     function isOneOfRoles(roles) {
@@ -12,58 +13,43 @@ service cloud.firestore {
       return userRole in roles;
     }
 
-    // Attendance Sessions: Store active session details (codes, correct code, timing)
-    match /attendance_sessions/{sessionId} {
-      allow read: if request.auth != null; // All authenticated users can read session details (e.g., to get valid_codes if shown on student app)
-      
-      // Only faculty or admin can create new sessions
-      allow create: if request.auth != null && isOneOfRoles(['admin', 'faculty'])
-                    && request.resource.data.keys().hasAll(['class_code', 'valid_codes', 'correct_code', 'start_time', 'end_time', 'created_by'])
-                    && request.resource.data.created_by == request.auth.uid
-                    && request.resource.data.start_time == request.time // Ensure start_time is server timestamp
-                    && request.resource.data.valid_codes is list && request.resource.data.valid_codes.size() == 3
-                    && request.resource.data.correct_code is string && request.resource.data.correct_code in request.resource.data.valid_codes
-                    && request.resource.data.end_time > request.resource.data.start_time;
-
-      // Sessions are generally immutable once created, or deletable by admin/creator
-      allow update: if false; // Or specific logic: request.auth != null && (isUserRole('admin') || resource.data.created_by == request.auth.uid);
-      allow delete: if request.auth != null && isOneOfRoles(['admin', 'faculty']) && (isUserRole('admin') || resource.data.created_by == request.auth.uid);
+    // Users collection (assuming you store user roles here)
+    match /users/{userId} {
+      allow read: if request.auth != null; // Authenticated users can read profiles (adjust as needed)
+      allow write: if request.auth.uid == userId || isRole('admin'); // Users can update their own profile, admins can update any
     }
 
-    // Attendance: Store student submissions for each session
+    // Attendance Sessions: Created by faculty/admin
+    match /attendance_sessions/{sessionId} {
+      allow read: if request.auth != null; // Students need to read session_id and generated_codes
+      allow create: if request.auth != null && isOneOfRoles(['faculty', 'admin']); // Only faculty/admin can start sessions
+      allow update, delete: if request.auth != null && (isOneOfRoles(['admin']) || resource.data.created_by == request.auth.uid) ; // Admin or creator can manage
+      // Ensure required fields on create
+      allow create: if request.resource.data.keys().hasAll(['class_code', 'generated_codes', 'correct_code', 'start_time', 'end_time', 'created_by'])
+                      && request.resource.data.class_code is string
+                      && request.resource.data.generated_codes is list && request.resource.data.generated_codes.size() == 3
+                      && request.resource.data.correct_code is string
+                      && request.resource.data.start_time == request.time // Ensure server timestamp is used for start_time
+                      && request.resource.data.end_time is timestamp
+                      && request.resource.data.created_by == request.auth.uid;
+    }
+
+    // Attendance Records: Created by students
     match /attendance/{attendanceId} {
-      // Student can read their own attendance records
-      // Faculty/Admin can read all attendance records for reporting
-      allow read: if request.auth != null && 
-                     (request.auth.uid == resource.data.student_id || isOneOfRoles(['admin', 'faculty']));
-      
-      // Authenticated student can create their own attendance record
-      allow create: if request.auth != null 
-                    // Submitted by the authenticated user
-                    && request.auth.uid == request.resource.data.student_id
-                    // Required fields check
-                    && request.resource.data.keys().hasAll(['student_id', 'session_id', 'class_code', 'selected_code', 'is_correct', 'status', 'timestamp'])
-                    // Ensure correct types
-                    && request.resource.data.student_id is string
+      allow read: if request.auth != null && (resource.data.student_id == request.auth.uid || isOneOfRoles(['faculty', 'admin'])); // Students see their own, faculty/admin see all
+      allow create: if request.auth != null // Only authenticated users can submit
+                    // Validate data consistency and integrity
+                    && request.resource.data.student_id == request.auth.uid // Student can only submit for themselves
+                    && request.resource.data.keys().hasAll(['student_id', 'session_id', 'class_code', 'selected_code', 'status', 'timestamp'])
                     && request.resource.data.session_id is string
                     && request.resource.data.class_code is string
-                    && request.resource.data.selected_code is string
-                    && request.resource.data.is_correct is bool
-                    && request.resource.data.status is string
-                    // Timestamp must be server-generated
-                    && request.resource.data.timestamp == request.time
-                    // Ensure student_id in the document matches the authenticated user's UID
-                    && request.resource.data.student_id == request.auth.uid;
-                    // Further validation (e.g., selected_code is one of the valid_codes for the session) can be done in Cloud Function
-
-      // Attendance records are immutable once created
-      allow update: if false;
-      allow delete: if request.auth != null && isUserRole('admin'); // Only admin can delete
+                    && request.resource.data.selected_code is string && request.resource.data.selected_code.size() == 2
+                    && (request.resource.data.status == 'present' || request.resource.data.status == 'invalid')
+                    && request.resource.data.timestamp == request.time; // Server timestamp
+      allow update: if false; // Records should be immutable once created
+      allow delete: if request.auth != null && isRole('admin'); // Only admins can delete records
     }
-
-    // Default deny all other collections (if any) unless explicitly allowed
-    // match /{document=**} {
-    //  allow read, write: if false;
-    // }
   }
 }
+
+    
