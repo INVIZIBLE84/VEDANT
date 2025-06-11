@@ -27,6 +27,13 @@ let firestore: Firestore;
 let functions: Functions; // Added Functions variable
 
 if (!getApps().length) {
+  if (!firebaseConfig.apiKey) {
+    console.error(
+      "Firebase API Key is missing. Please check your NEXT_PUBLIC_FIREBASE_API_KEY environment variable."
+    );
+    // Firebase will still attempt to initialize and throw its own error,
+    // but this log provides a more direct hint.
+  }
   firebaseApp = initializeApp(firebaseConfig);
 } else {
   firebaseApp = getApp();
