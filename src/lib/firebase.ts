@@ -27,9 +27,21 @@ let firestore: Firestore;
 let functions: Functions; // Added Functions variable
 
 if (!getApps().length) {
-  if (!firebaseConfig.apiKey) {
+  // Log the status of all Firebase config variables for easier debugging
+  console.log("Firebase Config Check:");
+  console.log(` - NEXT_PUBLIC_FIREBASE_API_KEY: ${firebaseConfig.apiKey ? 'Loaded' : 'MISSING!'}`);
+  console.log(` - NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${firebaseConfig.authDomain ? 'Loaded' : 'MISSING!'}`);
+  console.log(` - NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${firebaseConfig.projectId ? 'Loaded' : 'MISSING!'}`);
+  console.log(` - NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${firebaseConfig.storageBucket ? 'Loaded' : 'MISSING!'}`);
+  console.log(` - NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${firebaseConfig.messagingSenderId ? 'Loaded' : 'MISSING!'}`);
+  console.log(` - NEXT_PUBLIC_FIREBASE_APP_ID: ${firebaseConfig.appId ? 'Loaded' : 'MISSING!'}`);
+  // measurementId is optional, so we'll just note if it's present
+  console.log(` - NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID: ${firebaseConfig.measurementId ? 'Loaded' : 'Not set (optional)'}`);
+
+
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     console.error(
-      "Firebase API Key is missing. Please check your NEXT_PUBLIC_FIREBASE_API_KEY environment variable."
+      "CRITICAL Firebase Config Missing: API Key or Project ID is not defined. Please check your NEXT_PUBLIC_FIREBASE_ environment variables. Firebase cannot be initialized correctly."
     );
     // Firebase will still attempt to initialize and throw its own error,
     // but this log provides a more direct hint.
