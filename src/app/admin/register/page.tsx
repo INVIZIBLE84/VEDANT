@@ -93,7 +93,7 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/Vedant.png"
+             src="/Nexus.png"
              alt="Cyber Sentinels NEXUS Logo"
              data-ai-hint="cyber nexus logo"
              width={219}

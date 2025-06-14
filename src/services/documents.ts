@@ -138,7 +138,7 @@ let sampleDocuments: Document[] = [
         id: 'doc-logo', name: 'S.P.A.R.K._Logo.svg', type: 'Other',
         uploadedBy: { id: 'admin001', name: 'Admin User', role: 'admin' }, uploadDate: '2024-07-01T09:00:00Z',
         metadata: { department: 'Administration', tags: ['branding', 'logo'] },
-        status: 'Uploaded', fileUrl: '/Vedant.png', fileSize: 120 * 1024, fileMimeType: 'image/svg+xml', version: 1, isArchived: false,
+        status: 'Uploaded', fileUrl: '/Nexus.png', fileSize: 120 * 1024, fileMimeType: 'image/svg+xml', version: 1, isArchived: false,
     },
      {
         id: 'doc-project-archive', name: 'FinalYearProjects_2023.zip', type: 'Other',
