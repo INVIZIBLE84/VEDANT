@@ -93,9 +93,9 @@ export default function AdminRegisterPage() {
       <Card className="w-full max-w-md shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
            <Image
-             src="/Nexus.png"
-             alt="Cyber Sentinels NEXUS Logo"
-             data-ai-hint="cyber nexus logo"
+             src="/Nexuss.png"
+             alt="Cyber Sentinels Nexuss Logo"
+             data-ai-hint="cyber Nexuss logo"
              width={219}
              height={55}
              className="mx-auto mb-4 h-auto"
