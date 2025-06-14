@@ -152,7 +152,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex flex-col items-center justify-center p-4"> {/* Centering content */}
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="/Cyber_Sentinels_NEXUS.png"
+                src="/Vedant.png"
                 alt="Cyber Sentinels NEXUS Logo"
                 data-ai-hint="cyber nexus logo"
                 width={700}
