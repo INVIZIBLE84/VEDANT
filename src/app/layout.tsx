@@ -14,7 +14,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: "S.P.A.R.K.",
-  description: "System for Performance Analytics, Recognition & Kinetics",
+  description: "Strategic Platform for Analytics, Reports & Knowledgeflow",
 };
 
 export default function RootLayout({

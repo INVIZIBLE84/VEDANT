@@ -95,9 +95,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm shadow-2xl border border-primary/20">
         <CardHeader className="space-y-1 text-center">
           <Image
-            src="/Nexuss.png"
-            alt="Cyber Sentinels Nexuss Logo"
-            data-ai-hint="cyber Nexuss logo"
+            src="/Vedant.png"
+            alt="S.P.A.R.K. Logo"
+            data-ai-hint="spark logo"
             width={219}
             height={55}
             className="mx-auto mb-4 h-auto"

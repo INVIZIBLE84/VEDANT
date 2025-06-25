@@ -152,9 +152,9 @@ export function AppSidebar() {
       <SidebarHeader className="flex flex-col items-center justify-center p-4"> {/* Centering content */}
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="/Nexuss.png"
-                alt="Cyber Sentinels Nexuss Logo"
-                data-ai-hint="cyber Nexuss logo"
+                src="/Vedant.png"
+                alt="S.P.A.R.K. Logo"
+                data-ai-hint="spark logo"
                 width={700}
                 height={176}
                 className="h-auto max-w-full group-data-[collapsible=icon]:w-[40px] group-data-[collapsible=icon]:h-auto"
