@@ -152,7 +152,7 @@ export function AppSidebar() {
       <SidebarHeader className="flex flex-col items-center justify-center p-4"> {/* Centering content */}
          <Link href="/" className="flex flex-col items-center gap-2 overflow-hidden">
              <Image
-                src="/Vedant.png"
+                src="/logo.png"
                 alt="S.P.A.R.K. Logo"
                 data-ai-hint="spark logo"
                 width={700}

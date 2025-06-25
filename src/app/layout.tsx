@@ -15,6 +15,10 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "S.P.A.R.K.",
   description: "Strategic Platform for Analytics, Reports & Knowledgeflow",
+  icons: {
+    icon: '/logo.png',
+    apple: '/logo.png',
+  }
 };
 
 export default function RootLayout({
